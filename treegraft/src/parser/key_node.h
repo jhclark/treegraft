@@ -5,7 +5,7 @@
 
 typedef struct _key_nodeT {
 	keyT* key;
-	key_vecT* children;
+	struct __keynode_vecT* children;
 } key_nodeT;
 
 #endif /*KEY_NODE_H_*/

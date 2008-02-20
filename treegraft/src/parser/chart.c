@@ -1,15 +1,10 @@
-#include <assert.h>
+#include <chart.h>
 
-#include <tkn2keyvec_hashmap.h>
-#include <parse_vec.h>
-#include <arc.h>
-#include <key.h>
+// TODO: vec_add_all
+// TODO: vec_put
 
-#define DEFAULT_CHART_SIZE = 1000;
-typedef struct __chartT {
-	tkn2keyvec_hashmapT* chart;
-	key_vecT* parses;
-} chartT;
+#define DEFAULT_CHART_SIZE 1000
+#define MAX_CHARS_PER_PARSE 100000
 
 void chart_add(chartT* chart, keyT* key) {
 	// do ambiguity packing by virtue of id choice and hashing
@@ -21,116 +16,168 @@ void chart_add_parse(chartT* chart, keyT* key) {
 	key_vec_add(chart->parses, key);
 }
 
-static inline parse_vecT* chart_get_parses1(chartT* chart, keyT* key) {
-	return chart_get_parses2(chart, key->active_arc);
+void chart_unpack_backpointers1(arcT* arc, str_vecT* current_list) {
+
+	int i;
+	int j;
+	int k;
+	char* str;
+	keyT* parent;
+
+	// open parentheses
+	for (i = 0; i < current_list->size; i++) {
+		str = str_vec_get(current_list, i);
+		gruleT* rule = arc_get_grammar_rule(arc);
+
+		strncat(str, "(", MAX_CHARS_PER_PARSE);
+		strncat(str, grule_get_lhs(rule), MAX_CHARS_PER_PARSE);
+		strncat(str, " ", MAX_CHARS_PER_PARSE);
+	}
+
+	keyvec_vecT* backpointers = arc_get_backpointers(arc);
+	for (i = 0; i < backpointers->size; i++) {
+		assert(backpointers->data[i] != 0);
+
+		// expand the list to the size of the pack
+		int num_ambiguities = key_get_length(backpointers[i]);
+		str_vecT** mini_list = calloc(num_ambiguities, sizeof(str_vecT*));
+
+		for (j = 0; j < num_ambiguities; j++) {
+			mini_list[j] = str_vec_new(current_list->size);
+
+			for (k=0; k<mini_list[j]->size; k++) {
+				// create a sepearate buffer (parses branch from here)
+				str = strdup(current_list->data[k]);
+				str_vec_add(mini_list[j], str);
+				parent = key_vec_get(key_vec_get(backpointers, i), j);
+				chart_unpack2(parent, mini_list[j]);
+			}
+
+			current_list->size = 0;
+			for (j = 0; j < num_ambiguities; j++) {
+				str_vec_add_all(current_list, mini_list[j]);
+			}
+		}
+
+		// close off parentheses
+		for (i = 0; i < current_list->size; i++) {
+			str = str_vec_get(current_list, i);
+			strncat(str, ")", MAX_CHARS_PER_PARSE);
+		}
+	}
 }
 
 parse_vecT* chart_get_parses2(chartT* chart, arcT* arc) {
+
+	int i;
+	parseT* parse;
+
 	// unpack ambiguities from this parse
 	parse_vecT* parses = parse_vec_new(10);
 	key_nodeT* root = key_node_new();
 
-	ArrayList<Key>[] backpointers = arc.getBackpointers();
-	Key[] keys = new Key[backpointers.length];
-	unpackBackpointers(backpointers, keys, 0, root, true, parses);
+	key_vecT** backpointers = arc_get_backpointers(arc);
+	keyT** keys = calloc(chart->parses->size, sizeof(keyT*));
+	chart_unpack_backpointers2(backpointers, keys, 0, root, TRUE, parses);
 
-	for (
-			final Parse parse : parses) {
-				parse.setRoot(arc);
-			}
-			return parses.toArray(new
-			Parse[parses.size()]);
-		}
-
-parse_vecT* get_parses2(keyT* key) {
-	return get_parses3(key->active_arc);
+	for (i=0; i<parses->size; i++) {
+		parse = parse_vec_get(parses, i);
+		parse_set_root(arc);
+	}
+	return parses;
 }
 
-parse_vecT* get_parses3(arcT* arc) {
+parse_vecT* chart_get_parses1(chartT* chart, keyT* key) {
+	return chart_get_parses2(chart, key->arc);
+}
 
-	ArrayList<StringBuilder> currentList = new ArrayList<StringBuilder>();
-	currentList.add(new StringBuilder());
+parse_vecT* chart_get_parses4(arcT* arc) {
 
-	unpackBackpointers(arc, currentList);
+	str_vecT* current_list = str_vec_new(10);
+	int i;
+	char* str;
+	parseT* parse;
 
-	parse_vecT* result = new Parse[currentList.size()];
-	for (int i = 0; i < currentList.size(); i++) {
-		String str = currentList.get(i).toString();
-		result[i] = new Parse(str);
+	// initialize with an empty string FROM THE HEAP
+	str_vec_add(current_list, strdup(""));
+
+	chart_unpack_backpointers1(arc, current_list);
+
+	parse_vecT* result = parse_vec_new(current_list->size);
+	for (i = 0; i < current_list->size; i++) {
+		str = str_vec_get(current_list, i);
+		parse = parse_new(str);
+		parse_vec_put(i, parse);
 	}
 	return result;
 }
 
-void unpack_backpointers(arcT* arc, ArrayList<StringBuilder> currentList) {
+parse_vecT* chart_get_parses3(keyT* key) {
+	return chart_get_parses4(key->arc);
+}
 
-	// open parentheses
-	for (int i = 0; i < currentList.size(); i++) {
-		currentList.get(i).append("(" + arc.getGrammarRule().getLhs() + " ");
-	}
+void chart_unpack2(keyT* parent, str_vecT* current_list) {
 
-	ArrayList<Key>[] backpointers = arc.getBackpointers();
-	for (int i = 0; i < backpointers.length; i++) {
-		assert(backpointers[i] != null);
+	int i;
+	char* old_str;
+	char* new_str;
 
-		// expand the list to the size of the pack
-		int nAmbiguities = backpointers[i].size();
-		ArrayList<StringBuilder>[] miniList = new ArrayList[nAmbiguities];
-
-		for (int j = 0; j < nAmbiguities; j++) {
-			miniList[j] = new ArrayList<StringBuilder>(currentList.size());
-			for(final StringBuilder sb : currentList)
-			miniList[j].add(new StringBuilder(sb));
-			unpack2(backpointers[i].get(j), miniList[j]);
+	if (key_is_terminal(parent)) {
+		for (i = 0; i < current_list->size; i++) {
+			old_str = str_vec_get(current_list, i);
+			key_get_c_node_str(parent);
 		}
-
-		currentList.clear();
-		for (int j = 0; j < nAmbiguities; j++) {
-			currentList.addAll(miniList[j]);
-		}
-	}
-
-	// close off parentheses
-	for (int i = 0; i < currentList.size(); i++) {
-		currentList.get(i).append(")");
+	} else {
+		chart_unpack_backpointers1(parent->arc, current_list);
 	}
 }
 
-void unpack2(keyT* parent, ArrayList<StringBuilder> currentList) {
+void chart_unpack_node(keyT* parent, key_nodeT* tree, boolT right_most,
+		parse_vecT* parses) {
 
-	if(parent.isTerminal()) {
-		for (int i = 0; i < currentList.size(); i++) {
-			currentList.get(i).append(parent.toCNodeString());
-		}
+	parseT* parse;
+
+	if (key_is_terminal(parent)) {
+		parse = key_node_to_parse(tree);
+		parse_vec_add(parses, parse);
 	} else {
-		unpackBackpointers(parent.getActiveArc(), currentList);
+		arcT* arc = key_get_arc(parent);
+		keyvec_vecT* backpointers = arc_get_backpointers(arc);
+		key_vecT* keys = key_vec_new(backpointers->size);
+		chart_unpack_backpointers2(backpointers, keys, 0, tree, right_most,
+				parses);
 	}
 }
 
-void unpack_node(keyT* parent, Node<Key> tree, boolean rightMost, ArrayList<Parse> parses) {
-	if (parent.isTerminal()) {
-		parses.add(tree.toParse());
-	} else {
-		ArrayList<Key>[] backpointers = parent.getActiveArc().getBackpointers();
-		Key[] keys = new Key[backpointers.length];
-		unpackBackpointers(backpointers, keys, 0, tree, rightMost, parses);
-	}
-}
+void chart_unpack_backpointers2(keyvec_vecT* backpointers, key_vecT* keys,
+		int nBackpointer, key_nodeT* tree, boolT right_most, parse_vecT* parses) {
 
-void unpack_backpointers(ArrayList<Key>[] backpointers, keyT[] keys, int nBackpointer,
-		Node<Key> tree, boolean rightMost, ArrayList<Parse> parses) {
+	int i;
+	key_vecT* backpointer;
+	key_nodeT* subtree;
+	key_nodeT* node;
+	keyT* key;
 
-	if (nBackpointer == backpointers.length) {
-		for (int i = 0; i < keys.length; i++) {
-			unpackNode(keys[i], tree.children.get(i), rightMost && i == keys.length - 1, parses);
+	if (nBackpointer == backpointers->size) {
+		for (i = 0; i < keys->size; i++) {
+			key = key_vec_get(keys, i);
+			subtree = keynode_vec_get(tree->children, i);
+			chart_unpack_node(key, subtree, right_most && i == keys->size - 1,
+					parses);
 		}
 	} else {
-		if (backpointers[nBackpointer] != null) {
-			for (int i = 0; i < backpointers[nBackpointer].size(); i++) {
-				keys[nBackpointer] = backpointers[nBackpointer].get(i);
-				tree.children.add(new Node<Key>(keys[nBackpointer]));
-				unpackBackpointers(backpointers, keys, nBackpointer + 1, tree, rightMost,
-						parses);
-				tree.children.remove(tree.children.size() - 1);
+		backpointer = keyvec_vec_get(backpointers, nBackpointer);
+		if (backpointer != 0) {
+			for (i = 0; i < backpointer->size; i++) {
+				key = key_vec_get(backpointer, i);
+				key_vec_put(keys, i, key);
+
+				node = malloc(sizeof(key_nodeT));
+				node->key = key;
+				key_vec_add(tree->children, node);
+				chart_unpack_backpointers2(backpointers, keys, nBackpointer + 1,
+						tree, right_most, parses);
+				keynode_vec_remove(tree->children, tree->children->size - 1);
 			}
 		}
 	}
