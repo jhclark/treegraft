@@ -1,8 +1,5 @@
 #include <chart.h>
 
-// TODO: vec_add_all
-// TODO: vec_put
-
 #define DEFAULT_CHART_SIZE 1000
 #define MAX_CHARS_PER_PARSE 100000
 

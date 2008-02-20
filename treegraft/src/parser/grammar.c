@@ -1,9 +1,11 @@
+#include <grammar.h>
+
 private boolean useTopDownPredictions;
 private final GrammarRule[] ruleList;
 private final HashMap<String, GrammarRule[]> rules = new HashMap<String, GrammarRule[]>();
 private final HashMap<String, String[]> words = new HashMap<String, String[]>();
 
-grammar_t* grammar_init(char* filename) {
+grammarT* grammar_load(char* filename) {
 	BufferedReader in = new BufferedReader(new FileReader(file));
 	ArrayList<GrammarRule> ruleList = new ArrayList<GrammarRule>();
 
@@ -62,7 +64,7 @@ grammar_t* grammar_init(char* filename) {
  * @param word
  * @return
  */
-public String[] grammar_get_pos(String word) {
+pos_vecT* grammar_get_pos(tokenT word) {
 	String[] pos = words.get(word);
 	if (pos == null) {
 		return new String[0];
@@ -71,7 +73,7 @@ public String[] grammar_get_pos(String word) {
 	}
 }
 
-public GrammarRule[] getRulesStartingWith(Key key) {
+grule_vecT* getRulesStartingWith(keyT* key) {
 	if (useTopDownPredictions) {
 
 	}

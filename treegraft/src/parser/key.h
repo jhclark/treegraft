@@ -7,6 +7,7 @@ typedef struct __keyT {
 	int id;
 	int size;
 	arcT* arc;
+	tokenT lhs;
 } keyT;
 
 #endif /*KEY_H_*/
