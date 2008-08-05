@@ -8,6 +8,11 @@ void chart_add(chartT* chart, keyT* key) {
 	tkn2keyvec_hashmap_put(chart->chart, key->id, key);
 }
 
+boolT chart_contains_key(chartT* chart, int id) {
+	// XXX: is this the correct id to be passing in?
+	return (tkn2keyvec_hashmap_get(chart->chart, id) != 0);
+}
+
 void chart_add_parse(chartT* chart, keyT* key) {
 	assert(chart_contains_key(chart, key->id));
 	key_vec_add(chart->parses, key);
@@ -104,7 +109,7 @@ parse_vecT* chart_get_parses4(arcT* arc) {
 	for (i = 0; i < current_list->size; i++) {
 		str = str_vec_get(current_list, i);
 		parse = parse_new(str);
-		parse_vec_put(i, parse);
+		parse_vec_put(result, i, parse);
 	}
 	return result;
 }

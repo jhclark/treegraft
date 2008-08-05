@@ -1,7 +1,7 @@
 #ifndef KEY_NODE_H_
 #define KEY_NODE_H_
 
-#include <key_vec.h>
+#include <tg_generics.h>
 
 typedef struct _key_nodeT {
 	keyT* key;

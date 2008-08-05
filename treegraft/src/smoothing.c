@@ -87,7 +87,7 @@ log_prob_t lm_mod_knesser_ney_ngram(count_t occurances, count_t event_count_sum,
 	if(numerator < 0.0)
 		numerator = 0.0;
 	numerator += delta;
-	numerator *= N1; // TODO: XXX
+	//numerator *= N1; // TODO: XXX
 	
 	// TODO: How do we generalize MKN to using many n-gram models at a time?
 

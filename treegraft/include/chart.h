@@ -3,11 +3,7 @@
 
 #include <assert.h>
 
-#include <tkn2keyvec_hashmap.h>
-#include <keynode_vec.h>
-#include <keyvec_vec.h>
-#include <parse_vec.h>
-#include <str_vec.h>
+#include <tg_generics.h>
 #include <grule.h>
 #include <parse.h>
 #include <arc.h>

@@ -1,9 +1,7 @@
 #include <chart.h>
 #include <grammar.h>
 #include <key.h>
-#include <tkn2arcvec_hashmap.h>
-#include <token_vec.h>
-#include <grule_vec.h>
+#include <tg_generics.h>
 
 // TODO: Fix massive memory leaks
 // TODO: vec_add_all
@@ -161,4 +159,6 @@ int main(int argc, char** argv) {
 	
 	// free globals
 	free(KEY_S);
+	
+	return 0;
 }
