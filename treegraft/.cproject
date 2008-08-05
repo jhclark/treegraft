@@ -15,11 +15,16 @@
 </extensions>
 </storageModule>
 <storageModule moduleId="cdtBuildSystem" version="4.0.0">
-<configuration artifactExtension="" artifactName="frankensteinsparser_c" buildArtefactType="org.eclipse.cdt.build.core.buildArtefactType.exe" buildProperties="org.eclipse.cdt.build.core.buildType=org.eclipse.cdt.build.core.buildType.debug,org.eclipse.cdt.build.core.buildArtefactType=org.eclipse.cdt.build.core.buildArtefactType.exe" cleanCommand="rm -rf" description="" id="cdt.managedbuild.config.gnu.macosx.exe.debug.923491827" name="Debug" parent="cdt.managedbuild.config.gnu.macosx.exe.debug">
+<configuration artifactExtension="" artifactName="frankensteinsparser_c" buildArtefactType="org.eclipse.cdt.build.core.buildArtefactType.exe" buildProperties="org.eclipse.cdt.build.core.buildArtefactType=org.eclipse.cdt.build.core.buildArtefactType.exe,org.eclipse.cdt.build.core.buildType=org.eclipse.cdt.build.core.buildType.debug" cleanCommand="rm -rf" description="" id="cdt.managedbuild.config.gnu.macosx.exe.debug.923491827" name="Debug" parent="cdt.managedbuild.config.gnu.macosx.exe.debug">
 <folderInfo id="cdt.managedbuild.config.gnu.macosx.exe.debug.923491827." name="/" resourcePath="">
 <toolChain id="cdt.managedbuild.toolchain.gnu.macosx.exe.debug.1188552555" name="MacOSX GCC" superClass="cdt.managedbuild.toolchain.gnu.macosx.exe.debug">
 <targetPlatform id="cdt.managedbuild.target.gnu.platform.macosx.exe.debug.1772119580" name="Debug Platform" superClass="cdt.managedbuild.target.gnu.platform.macosx.exe.debug"/>
-<builder buildPath="${workspace_loc:/treegraft/Debug}" id="cdt.managedbuild.target.gnu.builder.macosx.exe.debug.1371731836" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="Gnu Make Builder" superClass="cdt.managedbuild.target.gnu.builder.macosx.exe.debug"/>
+<builder buildPath="${workspace_loc:/treegraft/Debug}" id="cdt.managedbuild.target.gnu.builder.macosx.exe.debug.1371731836" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="Gnu Make Builder" superClass="cdt.managedbuild.target.gnu.builder.macosx.exe.debug">
+<outputEntries>
+<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="outputPath" name="Debug"/>
+<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="outputPath" name="Release"/>
+</outputEntries>
+</builder>
 <tool id="cdt.managedbuild.tool.macosx.c.linker.macosx.exe.debug.698630448" name="MacOS X C Linker" superClass="cdt.managedbuild.tool.macosx.c.linker.macosx.exe.debug">
 <option id="macosx.c.link.option.nostart.654213696" name="Do not use standard start files (-nostartfiles)" superClass="macosx.c.link.option.nostart"/>
 <option id="macosx.c.link.option.nodeflibs.978901398" name="Do not use default libraries (-nodefaultlibs)" superClass="macosx.c.link.option.nodeflibs"/>
@@ -39,6 +44,15 @@
 </tool>
 <tool id="cdt.managedbuild.tool.macosx.cpp.linker.macosx.exe.debug.710722461" name="MacOS X C++ Linker" superClass="cdt.managedbuild.tool.macosx.cpp.linker.macosx.exe.debug"/>
 <tool id="cdt.managedbuild.tool.gnu.assembler.macosx.exe.debug.2140078726" name="GCC Assembler" superClass="cdt.managedbuild.tool.gnu.assembler.macosx.exe.debug">
+<option id="gnu.both.asm.option.include.paths.1901120150" superClass="gnu.both.asm.option.include.paths" valueType="includePath">
+<listOptionValue builtIn="false" value="../treegraft/src/lm"/>
+<listOptionValue builtIn="false" value="../treegraft/src/generic_types"/>
+<listOptionValue builtIn="false" value="../treegraft/src/parser"/>
+<listOptionValue builtIn="false" value="../treegraft/src/suffixarray"/>
+<listOptionValue builtIn="false" value="../treegraft/src/util"/>
+<listOptionValue builtIn="false" value="../uglygenerics/src"/>
+<listOptionValue builtIn="false" value="../treegraft/src/tokens"/>
+</option>
 <inputType id="cdt.managedbuild.tool.gnu.assembler.input.305210212" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
 </tool>
 <tool id="cdt.managedbuild.tool.gnu.archiver.macosx.base.243775148" name="GCC Archiver" superClass="cdt.managedbuild.tool.gnu.archiver.macosx.base"/>
@@ -50,13 +64,13 @@
 <option defaultValue="gnu.c.optimization.level.none" id="gnu.c.compiler.macosx.exe.debug.option.optimization.level.1602814611" name="Optimization Level" superClass="gnu.c.compiler.macosx.exe.debug.option.optimization.level" valueType="enumerated"/>
 <option id="gnu.c.compiler.macosx.exe.debug.option.debugging.level.1627625267" name="Debug Level" superClass="gnu.c.compiler.macosx.exe.debug.option.debugging.level" value="gnu.c.debugging.level.max" valueType="enumerated"/>
 <option id="gnu.c.compiler.option.include.paths.329302976" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" valueType="includePath">
-<listOptionValue builtIn="false" value="&quot;${workspace_loc:/treegraft/src/lm}&quot;"/>
-<listOptionValue builtIn="false" value="&quot;${workspace_loc:/treegraft/src/generic_types}&quot;"/>
-<listOptionValue builtIn="false" value="&quot;${workspace_loc:/treegraft/src/parser}&quot;"/>
-<listOptionValue builtIn="false" value="&quot;${workspace_loc:/treegraft/src/suffixarray}&quot;"/>
-<listOptionValue builtIn="false" value="&quot;${workspace_loc:/treegraft/src/util}&quot;"/>
-<listOptionValue builtIn="false" value="&quot;${workspace_loc:/uglygenerics/src}&quot;"/>
-<listOptionValue builtIn="false" value="&quot;${workspace_loc:/treegraft/src/tokens}&quot;"/>
+<listOptionValue builtIn="false" value="../treegraft/src/lm"/>
+<listOptionValue builtIn="false" value="../treegraft/src/generic_types"/>
+<listOptionValue builtIn="false" value="../treegraft/src/parser"/>
+<listOptionValue builtIn="false" value="../treegraft/src/suffixarray"/>
+<listOptionValue builtIn="false" value="../treegraft/src/util"/>
+<listOptionValue builtIn="false" value="../uglygenerics/src"/>
+<listOptionValue builtIn="false" value="../treegraft/src/tokens"/>
 </option>
 <option id="gnu.c.compiler.option.preprocessor.nostdinc.1401993827" name="Do not search system directories (-nostdinc)" superClass="gnu.c.compiler.option.preprocessor.nostdinc"/>
 <option id="gnu.c.compiler.option.preprocessor.preprocess.596149628" name="Preprocess only (-E)" superClass="gnu.c.compiler.option.preprocessor.preprocess"/>
@@ -79,9 +93,6 @@
 </tool>
 </toolChain>
 </folderInfo>
-<sourceEntries>
-<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src"/>
-</sourceEntries>
 </configuration>
 </storageModule>
 
@@ -377,7 +388,7 @@
 </toolChain>
 </folderInfo>
 <sourceEntries>
-<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src"/>
+<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 </sourceEntries>
 </configuration>
 </storageModule>
