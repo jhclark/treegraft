@@ -1,0 +1,34 @@
+S::S : [NP VP] -> [VP NP]
+(
+	(*score* 0.5)
+	(X1::Y2)
+	(X2::Y1)
+)
+
+S::S : [NP "bark"] -> ["come" NP]
+(
+	(*score* 0.75)
+	(X1::Y2)
+)
+
+NP::NP : [N] -> [N]
+(
+	(*score* 0.5)
+	(X1::Y1)
+)
+
+VP::ES_VP : [V] -> [V]
+(
+	(*score* 0.5)
+	(X1::Y1)
+)
+
+N::N |: ["the" "dogs"] -> ["perros"]
+(
+	(*score* 0.5)
+)
+
+V::V |: ["bark"] -> ["come"]
+(
+	(*score* 0.5)
+)

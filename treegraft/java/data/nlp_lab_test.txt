@@ -1,0 +1,20 @@
+S => NP VP
+NP => ART ADJ N
+NP => ART N
+NP => ADJ N
+NP => N
+VP => AUX VP
+VP => V NP
+VP => VP PP
+NP => NP PP
+PP => P NP
+
+ART -> the
+ADJ -> large
+V -> can
+AUX -> can
+N -> can
+V -> holds
+N -> water
+N -> man
+P -> in

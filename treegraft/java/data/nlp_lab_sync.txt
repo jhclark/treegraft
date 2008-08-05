@@ -1,0 +1,122 @@
+S::S : [NP VP] -> [VP NP]
+(
+	(*score* 0.5)
+	(X1::Y2)
+	(X2::Y1)
+)
+
+NP::NP : [ART ADJ N] -> [ART ADJ N]
+(
+	(*score* 1.0)
+	(X1::Y1)
+	(X2::Y2)
+	(X3::Y3)
+)
+
+NP::NP : [ART N] -> [ART N]
+(
+	(*score* 1.0)
+	(X1::Y1)
+	(X2::Y2)
+)
+
+NP::NP : [ADJ N] -> [ADJ N]
+(
+	(*score* 1.0)
+	(X1::Y1)
+	(X2::Y2)
+)
+
+NP::NP : [N] -> [N]
+(
+	(*score* 0.5)
+	(X1::Y1)
+)
+
+VP::VP : [AUX VP] -> [VP AUX]
+(
+	(*score* 1.0)
+	(X1::Y2)
+	(X2::Y1)
+)
+
+VP::ES_VP : [V NP] -> [NP V]
+(
+	(*score* 0.5)
+	(X1::Y2)
+	(X2::Y1)
+)
+
+VP::VP : [VP PP] -> [VP PP]
+(
+	(*score* 1.0)
+	(X1::Y1)
+	(X2::Y2)
+)
+
+NP::NP : [NP PP] -> [NP PP]
+(
+	(*score* 1.0)
+	(X1::Y1)
+	(X2::Y2)
+)
+
+PP::PP : [P NP] -> [NP P]
+(
+	(*score* 1.0)
+	(X1::Y1)
+	(X2::Y2)
+)
+
+
+
+ART::ART |: ["the"] -> [""]
+(
+	(*score* 1.0)
+)
+
+ADJ::ADJ |: ["large"] -> [""]
+(
+	(*score* 1.0)
+)
+
+V::V |: ["can"] -> ["kaikosaneru"]
+(
+	(*score* 1.0)
+)
+
+AUX::AUX |: ["can"] -> ["-dekiru"]
+(
+	(*score* 1.0)
+)
+
+N::N |: ["can"] -> ["oke"]
+(
+	(*score* 1.0)
+)
+
+V::V |: ["holds"] -> ["kukumu"]
+(
+	(*score* 1.0)
+)
+
+N::N |: ["water"] -> ["muzu"]
+(
+	(*score* 1.0)
+)
+
+N::N |: ["man"] -> ["otoko"]
+(
+	(*score* 1.0)
+)
+
+P::P |: ["in"] -> ["de"]
+(
+	(*score* 1.0)
+)
+
+S::S : [NP "bark"] -> ["come" NP]
+(
+	(*score* 0.75)
+	(X1::Y2)
+)
