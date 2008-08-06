@@ -248,6 +248,8 @@ public class ChartParserTest {
 			}
 
 			// TODO: read each output and make sure it exists in the chart
+			
+			// check transduced parses
 		}
 	}
 
