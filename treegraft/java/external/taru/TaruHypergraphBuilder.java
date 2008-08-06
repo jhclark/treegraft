@@ -1,8 +1,9 @@
-package info.jonclark.treegraft.core.formatting;
+package taru;
 
 import hyperGraph.HGVertex;
 import hyperGraph.HyperGraph;
 import info.jonclark.treegraft.chartparser.Key;
+import info.jonclark.treegraft.core.formatting.forest.ParseForestFormatter;
 import info.jonclark.treegraft.core.rules.GrammarRule;
 import info.jonclark.treegraft.core.tokens.Token;
 import info.jonclark.treegraft.core.tokens.TokenFactory;
@@ -26,14 +27,16 @@ public class TaruHypergraphBuilder<R extends GrammarRule<T>, T extends Token> ex
 	private TokenFactory<T> tokenFactory;
 	private final HashMap<Key<R, T>, Integer> ids = new HashMap<Key<R, T>, Integer>();
 
+	public static final int DEFAULT_VERTEX_COUNT = 100000;
+
 	private static final String TERMINAL_TYPE = "X";
 	private static final int DEFAULT_EDGE_INDEX = -1;
 	private static final int[] DEFAULT_KINDEX = { -1, -1 };
 
 	// pack target side insertions
 
-	public TaruHypergraphBuilder(HyperGraph graph, TokenFactory<T> tokenFactory) {
-		this.graph = graph;
+	public TaruHypergraphBuilder(TokenFactory<T> tokenFactory) {
+		this.graph = new HyperGraph(DEFAULT_VERTEX_COUNT);
 		this.tokenFactory = tokenFactory;
 	}
 
@@ -45,7 +48,7 @@ public class TaruHypergraphBuilder<R extends GrammarRule<T>, T extends Token> ex
 
 	@Override
 	public void addTerminal(Key<R, T> key) {
-		
+
 		// TODO: What if a single terminal key has multiple translations?
 		// TODO: This is only dealing with the source side; what about target
 		// sides?
@@ -91,15 +94,8 @@ public class TaruHypergraphBuilder<R extends GrammarRule<T>, T extends Token> ex
 	}
 
 	@Override
-	public int[] getRhsAlignment(Key<R, T> key) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public T[] transduce(Key<R, T> key) {
-		// TODO Auto-generated method stub
-		return null;
+	public HyperGraph getParseForest() {
+		return graph;
 	}
 
 }

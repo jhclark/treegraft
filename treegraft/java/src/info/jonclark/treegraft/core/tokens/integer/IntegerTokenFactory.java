@@ -5,17 +5,28 @@ import info.jonclark.treegraft.core.tokens.TokenFactory;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+/**
+ * A <code>TokenFactory</code> implementation for <code>IntegerTokens</code>.
+ * 
+ * @author Jonathan Clark
+ */
 public class IntegerTokenFactory extends TokenFactory<IntegerToken> {
 
 	private static final int DEFAULT_VOCAB_SIZE = 10000;
 	private final HashMap<String, IntegerToken> str2tok = new HashMap<String, IntegerToken>();
 	private final ArrayList<String> int2str = new ArrayList<String>(DEFAULT_VOCAB_SIZE);
 
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public String getTokenAsString(IntegerToken tok) {
 		return int2str.get(tok.id);
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public IntegerToken makeToken(String str, boolean terminal) {
 
 		String key;
@@ -34,7 +45,10 @@ public class IntegerTokenFactory extends TokenFactory<IntegerToken> {
 		}
 		return tok;
 	}
-	
+
+	/**
+	 * {@inheritDoc}
+	 */
 	public IntegerToken[] makeTerminalTokens(String[] strs) {
 		IntegerToken[] toks = new IntegerToken[strs.length];
 		for (int i = 0; i < toks.length; i++)
@@ -42,6 +56,9 @@ public class IntegerTokenFactory extends TokenFactory<IntegerToken> {
 		return toks;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public IntegerToken[] newTokenArray(int length) {
 		return new IntegerToken[length];

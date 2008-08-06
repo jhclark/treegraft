@@ -2,6 +2,11 @@ package info.jonclark.treegraft.core.tokens.integer;
 
 import info.jonclark.treegraft.core.tokens.Token;
 
+/**
+ * Represents tokens as integers so that comparisons can be done quickly.
+ * 
+ * @author Jonathan Clark
+ */
 public class IntegerToken implements Token {
 
 	protected final int id;
@@ -12,10 +17,16 @@ public class IntegerToken implements Token {
 		this.terminal = terminal;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public String getId() {
 		return id + "";
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public boolean equals(Object obj) {
 		if (obj instanceof IntegerToken) {
 			IntegerToken t = (IntegerToken) obj;
@@ -25,14 +36,23 @@ public class IntegerToken implements Token {
 		}
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public int hashCode() {
 		return id;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public boolean isTerminal() {
 		return terminal;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public String toString() {
 		return getId();
 	}

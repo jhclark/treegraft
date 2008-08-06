@@ -1,6 +1,7 @@
 package info.jonclark.treegraft.core.rules;
 
 import info.jonclark.stat.SecondTimer;
+import info.jonclark.treegraft.core.formatting.parses.SyncParseFormatter;
 import info.jonclark.treegraft.core.tokens.Token;
 import info.jonclark.treegraft.unification.Constraint;
 import info.jonclark.treegraft.util.ProbUtils;
@@ -8,6 +9,15 @@ import info.jonclark.util.StringUtils;
 
 import java.io.File;
 
+/**
+ * A synchronous version of a Context-Free GrammarRule.
+ * 
+ * @see SyncCFGRuleFactory
+ * @see SyncParseFormatter
+ * @author Jonathan Clark
+ * @param <T>
+ *            The token type being used in this <code>ChartParser</code>
+ */
 public class SyncCFGRule<T extends Token> implements GrammarRule<T> {
 
 	private final T lhs;
@@ -28,6 +38,8 @@ public class SyncCFGRule<T extends Token> implements GrammarRule<T> {
 	private final SecondTimer cost = new SecondTimer(true, false);
 
 	/**
+	 * Creates a new <code>SyncCFGRule</code>.
+	 * 
 	 * @param lhs
 	 * @param rhs
 	 * @param targetLhs
@@ -58,97 +70,98 @@ public class SyncCFGRule<T extends Token> implements GrammarRule<T> {
 		this.lineNumber = lineNumber;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see info.jonclark.parser.core.GRule#getLhs()
+	/**
+	 * {@inheritDoc}
 	 */
 	public T getLhs() {
 		return lhs;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see info.jonclark.parser.core.GRule#getRhs()
+	/**
+	 * {@inheritDoc}
 	 */
 	public T[] getRhs() {
 		return rhs;
 	}
 
+	/**
+	 * Gets the target-side LHS of this rule
+	 * 
+	 * @return the constituent for the target LHS of this rule
+	 */
 	public T getTargetLhs() {
 		return targetLhs;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see info.jonclark.parser.core.GRule#getRhs()
+	/**
+	 * Get the target-side right hand side of this rule in which terminals and
+	 * non-terminals can be freely mixed. e.g. The "NP freely VP" in "S -> NP
+	 * freely VP"
+	 * 
+	 * @return the constituents that form the target RHS of this rule
 	 */
 	public T[] getTargetRhs() {
 		return targetRhs;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see info.jonclark.parser.core.GRule#getLength()
+	/**
+	 * {@inheritDoc}
 	 */
 	public int getLength() {
 		return rhs.length;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see info.jonclark.parser.core.GRule#beginEvaluation()
+	/**
+	 * {@inheritDoc}
 	 */
 	public void beginEvaluation() {
 		cost.go();
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see info.jonclark.parser.core.GRule#stopEvaluation()
+	/**
+	 * {@inheritDoc}
 	 */
 	public void stopEvaluation() {
 		cost.pause();
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see info.jonclark.parser.core.GRule#getTimeCost()
+	/**
+	 * {@inheritDoc}
 	 */
 	public String getTimeCost() {
 		return cost.getSecondsFormatted();
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see info.jonclark.parser.core.GRule#getConstraints()
+	/**
+	 * {@inheritDoc}
 	 */
 	public Constraint[] getConstraints() {
 		return constraints;
 	}
 
 	/**
-	 * Gets the user-specified rule identifier.
+	 * {@inheritDoc}
 	 */
 	public String getRuleId() {
 		return ruleId;
 	}
 
-	public String toString() {
-		return ruleId + "@" + file.getName() + ":" + lineNumber + " = " + lhs + "::" + targetLhs
-				+ " : [ " + StringUtils.untokenize(rhs) + " ] -> [ "
-				+ StringUtils.untokenize(targetRhs) + " ]";
-	}
-
+	/**
+	 * {@inheritDoc}
+	 */
 	public File getFile() {
 		return file;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public int getLineNumber() {
 		return lineNumber;
 	}
 
 	/**
-	 * Returns the rule score in the log probability domain.
+	 * {@inheritDoc}
 	 */
 	public double getLogProb() {
 		return logProb;
@@ -156,13 +169,24 @@ public class SyncCFGRule<T extends Token> implements GrammarRule<T> {
 
 	/**
 	 * Returns the alignment as an int array having the same length as the
-	 * source RHS, where each index corresponds to a source word and each value
-	 * corresponds to a target word. An array index containing the value -1
-	 * indicates that the source word is unaligned.
+	 * source RHS, where each index corresponds to a source constituent and each
+	 * value corresponds to a target constituent. An array index containing the
+	 * value -1 indicates that the source constituent is unaligned.
 	 * 
 	 * @return
 	 */
 	public int[] getAlignment() {
 		return alignment;
+	}
+
+	/**
+	 * Gets a string representation of this <code>SyncCFGRule</code>.
+	 * 
+	 * @return a string representation of this object
+	 */
+	public String toString() {
+		return ruleId + "@" + file.getName() + ":" + lineNumber + " = " + lhs + "::" + targetLhs
+				+ " : [ " + StringUtils.untokenize(rhs) + " ] -> [ "
+				+ StringUtils.untokenize(targetRhs) + " ]";
 	}
 }

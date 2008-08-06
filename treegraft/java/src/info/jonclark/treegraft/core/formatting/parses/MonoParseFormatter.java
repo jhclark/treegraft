@@ -1,10 +1,13 @@
-package info.jonclark.treegraft.core.formatting;
+package info.jonclark.treegraft.core.formatting.parses;
 
 import info.jonclark.treegraft.chartparser.Key;
 import info.jonclark.treegraft.core.rules.MonoCFGRule;
 import info.jonclark.treegraft.core.tokens.Token;
 import info.jonclark.treegraft.core.tokens.TokenFactory;
 
+/**
+ * A ParseFormatter for a MonoCFGRule.
+ */
 public class MonoParseFormatter<T extends Token> extends ParseFormatter<MonoCFGRule<T>, T> {
 
 	private final TokenFactory<T> tokenFactory;

@@ -2,6 +2,12 @@ package info.jonclark.treegraft.core.tokens.string;
 
 import info.jonclark.treegraft.core.tokens.Token;
 
+/**
+ * Represents tokens as unique Strings so that comparisons can be done quickly,
+ * while still retaining ease of debugging.
+ * 
+ * @author Jonathan Clark
+ */
 public class StringToken implements Token {
 
 	protected final String str;
@@ -12,33 +18,48 @@ public class StringToken implements Token {
 		this.terminal = terminal;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public String getId() {
 		return str;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public boolean equals(Object obj) {
 		if (obj instanceof StringToken) {
 			StringToken tok = (StringToken) obj;
-			
+
 			// make use of quick comparison for interned strings
 			return (this.str == tok.str);
-		} else if(obj instanceof String) {
+		} else if (obj instanceof String) {
 			String other = (String) obj;
-			
+
 			return other.equals(this.str);
 		} else {
 			return false;
 		}
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public int hashCode() {
 		return str.hashCode();
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public boolean isTerminal() {
 		return terminal;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public String toString() {
 		return str;
 	}

@@ -1,8 +1,8 @@
 package info.jonclark.treegraft.chartparser;
 
 import info.jonclark.treegraft.core.Parse;
-import info.jonclark.treegraft.core.formatting.ParseForestFormatter;
-import info.jonclark.treegraft.core.formatting.ParseFormatter;
+import info.jonclark.treegraft.core.formatting.forest.ParseForestFormatter;
+import info.jonclark.treegraft.core.formatting.parses.ParseFormatter;
 import info.jonclark.treegraft.core.rules.GrammarRule;
 import info.jonclark.treegraft.core.tokens.Token;
 
@@ -11,12 +11,16 @@ import java.util.ArrayList;
 /**
  * Stores information about an item that has already been proven to be a
  * complete parse. This class will be hashed by the Chart millions of times, so
- * an efficient hashCode() and equals(Object) method is essential. This class is
- * also where the ambiguity unpacking occurs when final parses are being
- * formatted.
+ * an efficient <code>hashCode()</code> and <code>equals(Object)</code> method
+ * is essential. This class is also one place where ambiguity UN-packing occurs
+ * when final parses are being formatted via the <code>getPartialParses</code>
+ * method.
  * 
- * @author jon
+ * @author Jonathan Clark
  * @param <R>
+ *            The rule type being used in this <code>ChartParser</code>
+ * @param <T>
+ *            The token type being used in this <code>ChartParser</code>
  */
 public class Key<R extends GrammarRule<T>, T extends Token> {
 
@@ -30,8 +34,12 @@ public class Key<R extends GrammarRule<T>, T extends Token> {
 	 * constructor is responsible for creating each key's score (log
 	 * probability) based on the backpointers of its consituent keys.
 	 * 
-	 * @param id
 	 * @param arc
+	 *            The completed <code>ActiveArc</code> that called for the
+	 *            creation of this <code>Key</code>
+	 * @param word
+	 *            The terminal token associated with this key; null if this is a
+	 *            non-terminal <code>Key</code>
 	 */
 	public Key(ActiveArc<R, T> arc, T word) {
 		this.arc = arc;
@@ -54,19 +62,21 @@ public class Key<R extends GrammarRule<T>, T extends Token> {
 	private int genHash() {
 
 		int hashCode = 0;
-		// if (arc.getGrammarRule() != null) {
 		hashCode = arc.getRule().getLhs().hashCode();
-		// } else {
-		// hashCode = word.hashCode();
-		// }
 
 		int mask = (arc.getStartIndex() << 16) & arc.getEndIndex();
 		hashCode ^= mask;
 		return hashCode;
 	}
 
+	/**
+	 * Determines if this <code>Key</code> is equal to another <code>Key</code>
+	 * object.
+	 * 
+	 * @return True if the LHS's, start indices, and end indices match; false
+	 *         otherwise.
+	 */
 	public boolean equals(Object obj) {
-		// if (arc.getGrammarRule() != null) {
 		if (obj instanceof Key) {
 			Key<R, T> key = (Key<R, T>) obj;
 			return arc.getRule().getLhs().equals(key.arc.getRule().getLhs())
@@ -75,69 +85,101 @@ public class Key<R extends GrammarRule<T>, T extends Token> {
 		} else {
 			return false;
 		}
-		// } else {
-		// return word.equals(key.word) && arc.getStartIndex() ==
-		// key.arc.getStartIndex()
-		// && arc.getEndIndex() == key.getEndIndex();
-		// }
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public int hashCode() {
 		return hashCode;
 	}
 
+	/**
+	 * Gets the zero-based source-side input index where this <code>Key</code>
+	 * begins.
+	 * 
+	 * @return the start index
+	 */
 	public int getStartIndex() {
 		return arc.getStartIndex();
 	}
 
+	/**
+	 * Gets the zero-based source-side input index where this <code>Key</code>
+	 * ends.
+	 * 
+	 * @return the end index
+	 */
 	public int getEndIndex() {
 		return arc.getEndIndex();
 	}
 
+	/**
+	 * @see GrammarRule.getLhs
+	 */
 	public T getLhs() {
 		return arc.getRule().getLhs();
 	}
 
+	/**
+	 * Gets the length of this key in terms of source-side tokens covered.
+	 * 
+	 * @return the length in tokens of this key
+	 */
 	public int getLength() {
 		return (arc.getEndIndex() - arc.getStartIndex());
 	}
 
 	/**
-	 * This will be NULL for terminals.
+	 * Gets the <code>GrammarRule</code> that called for the creation of this
+	 * <code>Key</code>.
 	 * 
-	 * @return
+	 * @return NULL for terminals; otherwise, a <code>GrammarRule</code>
 	 */
 	public R getRule() {
 		return arc.getRule();
 	}
 
 	/**
-	 * Gets the terminal token associated with this Key. This will be NULL for
-	 * non-terminals.
+	 * Gets the terminal token associated with this Key.
 	 * 
-	 * @return
+	 * @return NULL for non-terminals; otherwise, a terminal <code>Token</code>
 	 */
 	public T getWord() {
 		return word;
 	}
 
 	/**
-	 * @return The active arc associated with this key or NULL if this is a
-	 *         dummy key for a terminal token.
+	 * Gets the <code>ActiveArc</code> that created this <code>Key</code>.
+	 * 
+	 * @return NULL if this is a dummy key for a terminal token; otherwise, an
+	 *         <code>ActiveArc</code>.
 	 */
 	public ActiveArc<R, T> getActiveArc() {
 		return arc;
 	}
 
+	/**
+	 * Determine if this <code>Key</code> represents a terminal
+	 * <code>Token</code>.
+	 * 
+	 * @return True if this is a terminal; False otherwise.
+	 */
 	public boolean isTerminal() {
 		return (word != null);
 	}
 
+	/**
+	 * Starts the grammar profiling timer for the rule associated with this key.
+	 */
 	public void startTimer() {
 		if (getRule() != null)
 			getRule().beginEvaluation();
 	}
 
+	/**
+	 * Stops the grammar profiling timer for the rule associated with this key.
+	 */
 	public void stopTimer() {
 		if (getRule() != null)
 			getRule().stopEvaluation();
@@ -151,10 +193,25 @@ public class Key<R extends GrammarRule<T>, T extends Token> {
 		}
 	}
 
+	/**
+	 * Gets this score (in the log probability domain) associated with this key.
+	 * 
+	 * @return a log probability
+	 */
 	public double getLogProb() {
 		return logProb;
 	}
 
+	/**
+	 * Gets the partial (or possibly complete) parses associated with this
+	 * <code>Key</code> as formatted by the <code>ParseFormatter</code>.
+	 * 
+	 * @param formatter
+	 *            an object that determines how the resulting parses will look
+	 *            (including whether they are source trees, target trees, or
+	 *            target strings).
+	 * @return an array of formatted parses
+	 */
 	@SuppressWarnings("unchecked")
 	public Parse<R, T>[] getPartialParses(ParseFormatter<R, T> formatter) {
 
@@ -172,10 +229,6 @@ public class Key<R extends GrammarRule<T>, T extends Token> {
 		return result;
 	}
 
-	public <F> void getParseForest(ParseForestFormatter<R, T, F> formatter, F hypergraph) {
-		throw new Error("Unimplemented.");
-	}
-
 	private void unpackNonterminalBackpointers(Key<R, T> key, ArrayList<StringBuilder> currentList,
 			ParseFormatter<R, T> formatter) {
 
@@ -183,8 +236,6 @@ public class Key<R extends GrammarRule<T>, T extends Token> {
 		for (int i = 0; i < currentList.size(); i++) {
 			currentList.get(i).append(formatter.formatNonterminalBefore(key));
 		}
-
-		// TODO: Reverse the alignment direction
 
 		// iterate over all of the RHS constituents for this key
 		int[] alignment = formatter.getRhsAlignment(key);
@@ -254,6 +305,12 @@ public class Key<R extends GrammarRule<T>, T extends Token> {
 		}
 	}
 
+	/**
+	 * Gets a string representation of this <code>Key</code> including the rule
+	 * or terminal symbol that lead to its creation, the source-side indices
+	 * that it covers, and information from the <code>ActiveArc</code> that
+	 * created it.
+	 */
 	public String toString() {
 		if (word != null) {
 			return genId() + "=<" + word.getId() + ">" + arc.toString();

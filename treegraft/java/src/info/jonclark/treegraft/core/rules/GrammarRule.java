@@ -11,8 +11,9 @@ import java.io.File;
  * synchronous transduction information) and in the Token implementations (e.g.
  * tokens for use in factored translation).
  * 
- * @author jon
+ * @author Jonathan Clark
  * @param <T>
+ *            The token type being used in this <code>ChartParser</code>
  */
 public interface GrammarRule<T extends Token> {
 
@@ -20,7 +21,7 @@ public interface GrammarRule<T extends Token> {
 	 * Get the source-side left hand side of this rule as a non-terminal token.
 	 * e.g. The "S" in "S -> NP VP"
 	 * 
-	 * @return
+	 * @return the constituent for the LHS of this rule
 	 */
 	public T getLhs();
 
@@ -29,7 +30,7 @@ public interface GrammarRule<T extends Token> {
 	 * non-terminals can be freely mixed. e.g. The "NP freely VP" in "S -> NP
 	 * freely VP"
 	 * 
-	 * @return
+	 * @return the constituents that form the RHS of this rule
 	 */
 	public T[] getRhs();
 
@@ -37,7 +38,7 @@ public interface GrammarRule<T extends Token> {
 	 * Get the length of the source RHS of this rule in terms of terminal and
 	 * non-terminal rules.
 	 * 
-	 * @return
+	 * @return the length of the RHS of this rule
 	 */
 	public int getLength();
 
@@ -55,28 +56,28 @@ public interface GrammarRule<T extends Token> {
 	 * Get the number of seconds consumed by evaluating this rule during the
 	 * lifetime of this GrammarRule.
 	 * 
-	 * @return
+	 * @return a time in seconds as a string
 	 */
 	public String getTimeCost();
 
 	/**
-	 * Get the unification constraints assocaited with this GrammarRule.
+	 * Get the unification constraints associated with this GrammarRule.
 	 * 
-	 * @return
+	 * @return an array of constraints
 	 */
 	public Constraint[] getConstraints();
 
 	/**
 	 * Get the score of this rule, in the log probability domain.
 	 * 
-	 * @return
+	 * @return a log probability
 	 */
 	public double getLogProb();
 
 	/**
 	 * Get the File in which this GrammarRule was defined.
 	 * 
-	 * @return
+	 * @return a file, which can be converted into string representations for debugging
 	 */
 	public File getFile();
 
@@ -84,14 +85,14 @@ public interface GrammarRule<T extends Token> {
 	 * Get the line number of the grammar file on which this GrammarRule was
 	 * defined.
 	 * 
-	 * @return
+	 * @return a line number as an integer
 	 */
 	public int getLineNumber();
-	
+
 	/**
 	 * Gets the user-specified identifier for this rule
 	 * 
-	 * @return
+	 * @return an identifier string such as NP,1001
 	 */
 	public String getRuleId();
 }

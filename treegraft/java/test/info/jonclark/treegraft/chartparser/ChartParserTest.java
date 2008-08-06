@@ -1,14 +1,12 @@
-package info.jonclark.parser;
+package info.jonclark.treegraft.chartparser;
 
-import static org.junit.Assert.*;
-import info.jonclark.treegraft.chartparser.Chart;
-import info.jonclark.treegraft.chartparser.ChartParser;
-import info.jonclark.treegraft.chartparser.Key;
-import info.jonclark.treegraft.chartparser.ActiveArc.OutputType;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import info.jonclark.treegraft.core.Grammar;
 import info.jonclark.treegraft.core.Parse;
-import info.jonclark.treegraft.core.formatting.MonoParseFormatter;
-import info.jonclark.treegraft.core.formatting.SyncParseFormatter;
+import info.jonclark.treegraft.core.formatting.parses.MonoParseFormatter;
+import info.jonclark.treegraft.core.formatting.parses.SyncParseFormatter;
+import info.jonclark.treegraft.core.formatting.parses.ParseFormatter.OutputType;
 import info.jonclark.treegraft.core.rules.MonoCFGRule;
 import info.jonclark.treegraft.core.rules.MonoCFGRuleFactory;
 import info.jonclark.treegraft.core.rules.SyncCFGRule;
@@ -23,7 +21,6 @@ import java.io.IOException;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 import org.junit.Test;
 
@@ -46,13 +43,9 @@ public class ChartParserTest {
 		String[] files =
 				new String[] { "grammar-t2t-1.gra", "lexicon-t2t-1.lex", "phrases-t2t-1.phr",
 						"grammar-t2t-2.gra", "lexicon-t2t-2.lex", "phrases-t2t-2.phr" };
-
-		Grammar<SyncCFGRule<StringToken>, StringToken> grammar =
-				new Grammar<SyncCFGRule<StringToken>, StringToken>(tokenFactory);
-
 		for (String file : files) {
 			System.out.println("Reading file: " + file);
-			Grammar.loadSyncGrammar(new File("data/huge/" + file), tokenFactory, grammar);
+			Grammar.loadSyncGrammar(new File("data/huge/" + file), tokenFactory);
 		}
 	}
 
@@ -62,12 +55,14 @@ public class ChartParserTest {
 		MonoCFGRuleFactory<StringToken> ruleFactory =
 				new MonoCFGRuleFactory<StringToken>(tokenFactory);
 
-		ChartParser<MonoCFGRule<StringToken>, StringToken> p =
-				ChartParser.getMonoChartParser(new File("data/test.gra"), ruleFactory, tokenFactory);
+		Grammar<MonoCFGRule<StringToken>, StringToken> grammar =
+				Grammar.loadMonoGrammar(new File("data/test.gra"), tokenFactory);
+		ChartParser<MonoCFGRule<StringToken>, StringToken> parser =
+				new ChartParser<MonoCFGRule<StringToken>, StringToken>(ruleFactory, grammar);
 
 		Chart<MonoCFGRule<StringToken>, StringToken> c =
 				new Chart<MonoCFGRule<StringToken>, StringToken>();
-		p.parse(tokenFactory.makeTerminalTokens(StringUtils.tokenize("dogs bark")), c);
+		parser.parse(tokenFactory.makeTerminalTokens(StringUtils.tokenize("dogs bark")), c);
 
 		MonoParseFormatter<StringToken> formatter =
 				new MonoParseFormatter<StringToken>(tokenFactory);
@@ -82,9 +77,10 @@ public class ChartParserTest {
 		MonoCFGRuleFactory<StringToken> ruleFactory =
 				new MonoCFGRuleFactory<StringToken>(tokenFactory);
 
-		ChartParser<MonoCFGRule<StringToken>, StringToken> p =
-				ChartParser.getMonoChartParser(new File("data/nlp_lab_test.txt"), ruleFactory,
-						tokenFactory);
+		Grammar<MonoCFGRule<StringToken>, StringToken> grammar =
+				Grammar.loadMonoGrammar(new File("data/nlp_lab_sync.txt"), tokenFactory);
+		ChartParser<MonoCFGRule<StringToken>, StringToken> parser =
+				new ChartParser<MonoCFGRule<StringToken>, StringToken>(ruleFactory, grammar);
 
 		// 1) Load input sentences
 		// 2) Load expected chart items
@@ -110,7 +106,7 @@ public class ChartParserTest {
 			// parse the input
 			Chart<MonoCFGRule<StringToken>, StringToken> c =
 					new Chart<MonoCFGRule<StringToken>, StringToken>();
-			p.parse(tokenFactory.makeTerminalTokens(StringUtils.tokenize(input)), c);
+			parser.parse(tokenFactory.makeTerminalTokens(StringUtils.tokenize(input)), c);
 
 			MonoParseFormatter<StringToken> formatter =
 					new MonoParseFormatter<StringToken>(tokenFactory);
@@ -122,7 +118,7 @@ public class ChartParserTest {
 			}
 
 			// now see if the resulting chart looks right
-			Set<Key<MonoCFGRule<StringToken>, StringToken>> keys = c.getKeys();
+			List<Key<MonoCFGRule<StringToken>, StringToken>> keys = c.getKeys();
 
 			System.out.println("Got " + keys.size() + " keys");
 
@@ -171,13 +167,15 @@ public class ChartParserTest {
 		SyncCFGRuleFactory<StringToken> ruleFactory =
 				new SyncCFGRuleFactory<StringToken>(tokenFactory);
 
-		ChartParser<SyncCFGRule<StringToken>, StringToken> p =
-				ChartParser.getSyncChartParser(new File("data/nlp_lab_sync.txt"), ruleFactory,
-						tokenFactory);
+		Grammar<SyncCFGRule<StringToken>, StringToken> grammar =
+				Grammar.loadSyncGrammar(new File("data/nlp_lab_sync.txt"), tokenFactory);
+		ChartParser<SyncCFGRule<StringToken>, StringToken> parser =
+				new ChartParser<SyncCFGRule<StringToken>, StringToken>(ruleFactory, grammar);
 
 		String[] inputs =
 				StringUtils.tokenize(
-						FileUtils.getFileAsString(new File("data/nlp_lab_expected.in")).toLowerCase(), "\n");
+						FileUtils.getFileAsString(new File("data/nlp_lab_expected.in")).toLowerCase(),
+						"\n");
 		String[] expectedOutputs =
 				StringUtils.tokenize(
 						FileUtils.getFileAsString(new File("data/nlp_lab_expected.out")), "\n");
@@ -195,7 +193,7 @@ public class ChartParserTest {
 			// parse the input
 			Chart<SyncCFGRule<StringToken>, StringToken> c =
 					new Chart<SyncCFGRule<StringToken>, StringToken>();
-			p.parse(tokenFactory.makeTerminalTokens(StringUtils.tokenize(input)), c);
+			parser.parse(tokenFactory.makeTerminalTokens(StringUtils.tokenize(input)), c);
 
 			// show parses found
 			for (OutputType outputType : OutputType.values()) {
@@ -211,7 +209,7 @@ public class ChartParserTest {
 			}
 
 			// now see if the resulting chart looks right
-			Set<Key<SyncCFGRule<StringToken>, StringToken>> keys = c.getKeys();
+			List<Key<SyncCFGRule<StringToken>, StringToken>> keys = c.getKeys();
 
 			System.out.println("Got " + keys.size() + " keys");
 
@@ -262,12 +260,15 @@ public class ChartParserTest {
 		File file = new File("data/de-en.gra");
 		// File file = new File("data/test_sync.gra");
 
-		ChartParser<SyncCFGRule<StringToken>, StringToken> p =
-				ChartParser.getSyncChartParser(file, ruleFactory, tokenFactory);
-		Chart<SyncCFGRule<StringToken>, StringToken> c =
+		Grammar<SyncCFGRule<StringToken>, StringToken> grammar =
+				Grammar.loadSyncGrammar(new File("data/nlp_lab_sync.txt"), tokenFactory);
+		ChartParser<SyncCFGRule<StringToken>, StringToken> parser =
+				new ChartParser<SyncCFGRule<StringToken>, StringToken>(ruleFactory, grammar);
+
+		Chart<SyncCFGRule<StringToken>, StringToken> chart =
 				new Chart<SyncCFGRule<StringToken>, StringToken>();
 
-		p.parse(tokenFactory.makeTerminalTokens(StringUtils.tokenize("the dogs bark")), c);
+		parser.parse(tokenFactory.makeTerminalTokens(StringUtils.tokenize("the dogs bark")), chart);
 
 		SyncParseFormatter<StringToken> formatter;
 		Parse<SyncCFGRule<StringToken>, StringToken>[] parses;
@@ -275,7 +276,7 @@ public class ChartParserTest {
 		for (OutputType outputType : OutputType.values()) {
 			formatter = new SyncParseFormatter<StringToken>(tokenFactory, outputType, true);
 
-			parses = c.getGrammaticalParses(formatter);
+			parses = chart.getGrammaticalParses(formatter);
 			System.out.println(parses.length + " parses found.");
 			for (final Parse<SyncCFGRule<StringToken>, StringToken> x : parses) {
 				System.out.println(outputType + ": " + x.toString());
@@ -283,17 +284,18 @@ public class ChartParserTest {
 		}
 
 		formatter = new SyncParseFormatter<StringToken>(tokenFactory, OutputType.SOURCE_TREE, true);
-		parses = c.getGrammaticalParses(formatter);
+		parses = chart.getGrammaticalParses(formatter);
 		assertEquals(1, parses.length);
 		assertEquals("(S (NP (N the dogs))(VP (V bark)))", parses[0].toString());
 
 		formatter = new SyncParseFormatter<StringToken>(tokenFactory, OutputType.TARGET_TREE, true);
-		parses = c.getGrammaticalParses(formatter);
+		parses = chart.getGrammaticalParses(formatter);
 		assertEquals(1, parses.length);
 		assertEquals("(S (NP (N perros))(VP_ES (V come)))", parses[0].toString());
 
-		formatter = new SyncParseFormatter<StringToken>(tokenFactory, OutputType.TARGET_STRING, true);
-		parses = c.getGrammaticalParses(formatter);
+		formatter =
+				new SyncParseFormatter<StringToken>(tokenFactory, OutputType.TARGET_STRING, true);
+		parses = chart.getGrammaticalParses(formatter);
 		assertEquals(1, parses.length);
 		assertEquals("perros come", parses[0].toString());
 	}

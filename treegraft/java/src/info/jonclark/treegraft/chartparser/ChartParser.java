@@ -3,23 +3,24 @@ package info.jonclark.treegraft.chartparser;
 import info.jonclark.log.LogUtils;
 import info.jonclark.treegraft.core.Grammar;
 import info.jonclark.treegraft.core.Parse;
-import info.jonclark.treegraft.core.formatting.ParseFormatter;
+import info.jonclark.treegraft.core.formatting.parses.ParseFormatter;
 import info.jonclark.treegraft.core.rules.GrammarRule;
-import info.jonclark.treegraft.core.rules.MonoCFGRule;
 import info.jonclark.treegraft.core.rules.RuleFactory;
-import info.jonclark.treegraft.core.rules.SyncCFGRule;
 import info.jonclark.treegraft.core.tokens.Token;
-import info.jonclark.treegraft.core.tokens.TokenFactory;
 
-import java.io.File;
-import java.io.IOException;
-import java.text.ParseException;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * A left-to-right chart parser that accepts both monolingual and synchronous
- * grammars.
+ * A left-to-right bottom-up depth-first-search chart parser that accepts both
+ * monolingual and synchronous grammars.
+ * 
+ * @author Jonathan Clark
+ * @param <R>
+ *            The rule type being used in this <code>ChartParser</code>
+ * @param <T>
+ *            The token type being used in this <code>ChartParser</code>
  */
 public class ChartParser<R extends GrammarRule<T>, T extends Token> {
 
@@ -27,48 +28,9 @@ public class ChartParser<R extends GrammarRule<T>, T extends Token> {
 	private RuleFactory<R, T> ruleFactory;
 	private static final Logger log = LogUtils.getLogger();
 
-	private ChartParser(RuleFactory<R, T> ruleFactory) {
+	public ChartParser(RuleFactory<R, T> ruleFactory, Grammar<R, T> grammar) {
 		this.ruleFactory = ruleFactory;
-	}
-
-	/**
-	 * Create a new ChartParser for a monolingual grammar.
-	 * 
-	 * @param <T>
-	 * @param grammarFile
-	 * @param tokenFactory
-	 * @return
-	 * @throws IOException
-	 * @throws ParseException
-	 */
-	public static <T extends Token> ChartParser<MonoCFGRule<T>, T> getMonoChartParser(
-			File grammarFile, RuleFactory<MonoCFGRule<T>, T> ruleFactory,
-			TokenFactory<T> tokenFactory) throws IOException, ParseException {
-
-		ChartParser<MonoCFGRule<T>, T> parser = new ChartParser<MonoCFGRule<T>, T>(ruleFactory);
-		parser.grammar = new Grammar<MonoCFGRule<T>, T>(tokenFactory);
-		Grammar.loadMonoGrammar(grammarFile, tokenFactory, parser.grammar);
-		return parser;
-	}
-
-	/**
-	 * Create a new ChartParser for a synchronous grammar.
-	 * 
-	 * @param <T>
-	 * @param grammarFile
-	 * @param tokenFactory
-	 * @return
-	 * @throws IOException
-	 * @throws ParseException
-	 */
-	public static <T extends Token> ChartParser<SyncCFGRule<T>, T> getSyncChartParser(
-			File grammarFile, RuleFactory<SyncCFGRule<T>, T> ruleFactory,
-			TokenFactory<T> tokenFactory) throws IOException, ParseException {
-
-		ChartParser<SyncCFGRule<T>, T> parser = new ChartParser<SyncCFGRule<T>, T>(ruleFactory);
-		parser.grammar = new Grammar<SyncCFGRule<T>, T>(tokenFactory);
-		Grammar.loadSyncGrammar(grammarFile, tokenFactory, parser.grammar);
-		return parser;
+		this.grammar = grammar;
 	}
 
 	/**
@@ -128,7 +90,7 @@ public class ChartParser<R extends GrammarRule<T>, T extends Token> {
 			Key<R, T> key = agenda.get();
 			key.startTimer();
 
-			System.out.println("PROCESSING KEY: " + key + " from rule " + key.getRule().toString());
+			log.info("PROCESSING KEY: " + key + " from rule " + key.getRule().toString());
 
 			// TODO: use timers for partially completed arcs too
 
@@ -155,22 +117,25 @@ public class ChartParser<R extends GrammarRule<T>, T extends Token> {
 				Key<R, T> newKey = new Key<R, T>(completedArc, null);
 				agenda.add(newKey);
 
-				System.out.print("NEW KEY: PARTIAL PARSE ");
-				for (ParseFormatter<R, T> formatter : ruleFactory.getDebugFormatters()) {
-					for (Parse<R, T> p : newKey.getPartialParses(formatter)) {
-						System.out.print(" -> " + p.toString());
+				// do some debug output
+				if (log.isLoggable(Level.INFO)) {
+					StringBuilder builder = new StringBuilder("NEW KEY: PARTIAL PARSE ");
+					for (ParseFormatter<R, T> formatter : ruleFactory.getDebugFormatters()) {
+						for (Parse<R, T> p : newKey.getPartialParses(formatter)) {
+							builder.append(" -> " + p.toString());
+						}
 					}
+					log.info(builder.toString());
 				}
-				System.out.println();
 			}
 
 			// step 7 -- add the key to the chart now that we've updated the
 			// state of all arcs
-			chart.add(key);
+			chart.addKey(key);
 
 			// TODO: In synchronous parsing, keys are not of the correct length
 
-			// step 8 (handled in Chart) -- check for completed parses
+			// step 8 -- check for completed parses
 			if (grammar.isStartSymbol(key.getLhs()) && key.getStartIndex() == 0
 					&& key.getEndIndex() == input.length) {
 				chart.addParse(key);

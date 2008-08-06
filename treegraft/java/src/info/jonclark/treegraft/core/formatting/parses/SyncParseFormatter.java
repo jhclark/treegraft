@@ -1,12 +1,16 @@
-package info.jonclark.treegraft.core.formatting;
+package info.jonclark.treegraft.core.formatting.parses;
 
 import info.jonclark.treegraft.chartparser.Key;
-import info.jonclark.treegraft.chartparser.ActiveArc.OutputType;
 import info.jonclark.treegraft.core.rules.SyncCFGRule;
 import info.jonclark.treegraft.core.tokens.Token;
 import info.jonclark.treegraft.core.tokens.TokenFactory;
 import info.jonclark.util.FormatUtils;
 
+/**
+ * A ParseFormatter for a SyncCFGRule that allows outputting parses as a source
+ * tree, target tree, or target string; This class is where the magic of
+ * transduction from source to target is actually defined.
+ */
 public class SyncParseFormatter<T extends Token> extends ParseFormatter<SyncCFGRule<T>, T> {
 
 	private final OutputType outputType;

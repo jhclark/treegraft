@@ -20,9 +20,20 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * Contains (and can read in) the rules with which input sequences will be
+ * parsed.
+ * 
+ * @author Jonathan Clark
+ * @param <R>
+ *            The rule type being used in this <code>ChartParser</code>
+ * @param <T>
+ *            The token type being used in this <code>ChartParser</code>
+ */
 public class Grammar<R extends GrammarRule<T>, T extends Token> {
 
 	public static final double DEFAULT_RULE_SCORE = 1.0;
+	public static final String[] DEFAULT_START_SYMBOLS = { "S" };
 
 	private List<R> emptyRuleList;
 	private HashMap<T, ArrayList<R>> rules = new HashMap<T, ArrayList<R>>();
@@ -30,16 +41,21 @@ public class Grammar<R extends GrammarRule<T>, T extends Token> {
 	private HashSet<T> startSymbols = new HashSet<T>();
 	private static int nRules = 0;
 
-	private final TokenFactory<T> tokenFactory;
-
-	public Grammar(TokenFactory<T> tokenFactory) {
-		this.tokenFactory = tokenFactory;
-
-		startSymbols.add(tokenFactory.makeToken("S", false));
+	protected Grammar(TokenFactory<T> tokenFactory, String[] startSymbols) {
+		for (String startSymbol : startSymbols) {
+			this.startSymbols.add(tokenFactory.makeToken(startSymbol, false));
+		}
 	}
 
-	public static <T extends Token> void loadMonoGrammar(File file, TokenFactory<T> tokenFactory,
-			Grammar<MonoCFGRule<T>, T> grammar) throws IOException, ParseException {
+	/**
+	 * Reads in a monolingual grammar file (see included data files for an
+	 * example format).
+	 */
+	public static <T extends Token> Grammar<MonoCFGRule<T>, T> loadMonoGrammar(File file,
+			TokenFactory<T> tokenFactory) throws IOException, ParseException {
+
+		Grammar<MonoCFGRule<T>, T> grammar =
+				new Grammar<MonoCFGRule<T>, T>(tokenFactory, DEFAULT_START_SYMBOLS);
 
 		BufferedReader in = new BufferedReader(new FileReader(file));
 		ArrayList<MonoCFGRule<T>> ruleList = new ArrayList<MonoCFGRule<T>>();
@@ -102,10 +118,19 @@ public class Grammar<R extends GrammarRule<T>, T extends Token> {
 		}
 
 		in.close();
+
+		return grammar;
 	}
 
-	public static <T extends Token> void loadSyncGrammar(File file, TokenFactory<T> tokenFactory,
-			Grammar<SyncCFGRule<T>, T> grammar) throws IOException, ParseException {
+	/**
+	 * Reads in a synchronous grammar file (see included data files for example
+	 * format).
+	 */
+	public static <T extends Token> Grammar<SyncCFGRule<T>, T> loadSyncGrammar(File file,
+			TokenFactory<T> tokenFactory) throws IOException, ParseException {
+
+		Grammar<SyncCFGRule<T>, T> grammar =
+				new Grammar<SyncCFGRule<T>, T>(tokenFactory, DEFAULT_START_SYMBOLS);
 
 		BufferedReader in = new BufferedReader(new FileReader(file));
 		ArrayList<SyncCFGRule<T>> ruleList = new ArrayList<SyncCFGRule<T>>();
@@ -182,8 +207,8 @@ public class Grammar<R extends GrammarRule<T>, T extends Token> {
 				RuleFeatures ruleFeatures = parseRuleFeatures(in, file, nLine, targetRhs.length);
 
 				SyncCFGRule<T> rule =
-						new SyncCFGRule<T>(sourceLhs, sourceRhs, targetLhs, targetRhs,
-								ruleId, ruleFeatures.alignment, ruleFeatures.score,
+						new SyncCFGRule<T>(sourceLhs, sourceRhs, targetLhs, targetRhs, ruleId,
+								ruleFeatures.alignment, ruleFeatures.score,
 								ruleFeatures.getConstraintArray(), file, nLine.get());
 				ruleList.add(rule);
 
@@ -211,6 +236,8 @@ public class Grammar<R extends GrammarRule<T>, T extends Token> {
 		}
 
 		in.close();
+
+		return grammar;
 	}
 
 	private static class RuleFeatures {
@@ -378,6 +405,12 @@ public class Grammar<R extends GrammarRule<T>, T extends Token> {
 		}
 	}
 
+	/**
+	 * Determines if a terminal or non-terminal token is a start symbol.
+	 * 
+	 * @param token the token in question
+	 * @return True if the token is a start symbol; false otherwise
+	 */
 	public boolean isStartSymbol(T token) {
 		return startSymbols.contains(token);
 	}

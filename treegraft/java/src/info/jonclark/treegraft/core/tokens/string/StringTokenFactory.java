@@ -4,10 +4,18 @@ import info.jonclark.treegraft.core.tokens.TokenFactory;
 
 import java.util.HashMap;
 
+/**
+ * A <code>TokenFactory</code> implementation for <code>StringTokens</code>.
+ * 
+ * @author Jonathan Clark
+ */
 public class StringTokenFactory extends TokenFactory<StringToken> {
 
 	private final HashMap<String, StringToken> str2tok = new HashMap<String, StringToken>();
 
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public String getTokenAsString(StringToken tok) {
 		if (tok.terminal) {
@@ -18,6 +26,9 @@ public class StringTokenFactory extends TokenFactory<StringToken> {
 		}
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public StringToken makeToken(String str, boolean terminal) {
 		String key;
@@ -35,6 +46,9 @@ public class StringTokenFactory extends TokenFactory<StringToken> {
 		return tok;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	public StringToken[] makeTerminalTokens(String[] strs) {
 		StringToken[] toks = new StringToken[strs.length];
 		for (int i = 0; i < toks.length; i++)
@@ -42,6 +56,9 @@ public class StringTokenFactory extends TokenFactory<StringToken> {
 		return toks;
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public StringToken[] newTokenArray(int length) {
 		return new StringToken[length];
