@@ -2,7 +2,7 @@ package info.jonclark.treegraft.core.formatting.parses;
 
 import info.jonclark.treegraft.chartparser.Key;
 import info.jonclark.treegraft.core.rules.GrammarRule;
-import info.jonclark.treegraft.core.rules.SyncCFGRule;
+import info.jonclark.treegraft.core.scoring.ParseScorer;
 import info.jonclark.treegraft.core.tokens.Token;
 
 import java.util.HashMap;
@@ -40,9 +40,11 @@ public abstract class ParseFormatter<R extends GrammarRule<T>, T extends Token> 
 	 * 
 	 * @param key
 	 *            The key whose children are about to be unpacked
+	 * @param score
+	 *            The current score at this node
 	 * @return a string to be appended to the parse being built
 	 */
-	public abstract String formatNonterminalBefore(Key<R, T> key);
+	public abstract String formatNonterminalBefore(Key<R, T> key, double score);
 
 	/**
 	 * Produces a string that should come after the children of the specified
@@ -50,9 +52,11 @@ public abstract class ParseFormatter<R extends GrammarRule<T>, T extends Token> 
 	 * 
 	 * @param key
 	 *            The key whose children have just been unpacked
+	 * @param score
+	 *            The current score at this node
 	 * @return a string to be appended to the parse being built
 	 */
-	public abstract String formatNonterminalAfter(Key<R, T> key);
+	public abstract String formatNonterminalAfter(Key<R, T> key, double score);
 
 	/**
 	 * Produces a string that represents the given terminal token (which is
@@ -67,14 +71,14 @@ public abstract class ParseFormatter<R extends GrammarRule<T>, T extends Token> 
 	/**
 	 * Gets the desired ordering of the RHS constituents for transduction. The
 	 * format of these alignments is defined in {@link
-	 * SyncCFGRule.getAlignment()}.
+	 * SyncCFGRule.getTargetToSourceAlignment()}.
 	 * 
 	 * @param key
 	 *            the key for which RHS alignments are desired
 	 * @return an array with alignment information as defined in
 	 *         <code>SyncCFGRule.getAlignment()</code>
 	 */
-	public abstract int[] getRhsAlignment(Key<R, T> key);
+	public abstract int[] getTargetToSourceRhsAlignment(Key<R, T> key);
 
 	/**
 	 * Given a key (which is associated with a GrammarRule), transduce its RHS
@@ -85,6 +89,13 @@ public abstract class ParseFormatter<R extends GrammarRule<T>, T extends Token> 
 	 * @return
 	 */
 	public abstract T[] transduce(Key<R, T> key);
+	
+	/**
+	 * Gets the <code>ParseScorer</code> to be used in scoring the outputted parses.
+	 * 
+	 * @return the <code>ParseScorer</code> passed to the constructor
+	 */
+	public abstract ParseScorer<R,T> getScorer();
 
 	/**
 	 * Gets an array in which the nth element has value n, which is useful in

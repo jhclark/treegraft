@@ -1,12 +1,14 @@
 package info.jonclark.treegraft.chartparser;
 
-import info.jonclark.treegraft.core.Parse;
-import info.jonclark.treegraft.core.formatting.forest.ParseForestFormatter;
+import info.jonclark.log.LogUtils;
+import info.jonclark.treegraft.core.formatting.parses.Parse;
 import info.jonclark.treegraft.core.formatting.parses.ParseFormatter;
 import info.jonclark.treegraft.core.rules.GrammarRule;
 import info.jonclark.treegraft.core.tokens.Token;
 
 import java.util.ArrayList;
+import java.util.List;
+import java.util.logging.Logger;
 
 /**
  * Stores information about an item that has already been proven to be a
@@ -24,10 +26,12 @@ import java.util.ArrayList;
  */
 public class Key<R extends GrammarRule<T>, T extends Token> {
 
+	private static final Logger log = LogUtils.getLogger();
+
 	protected final ActiveArc<R, T> arc;
 	private final T word;
 	private final int hashCode;
-	private double logProb;
+//	private double maxLogProb;
 
 	/**
 	 * Create a Key for a non-terminal or terminal grammar rule. This
@@ -46,17 +50,17 @@ public class Key<R extends GrammarRule<T>, T extends Token> {
 		this.word = word;
 		this.hashCode = genHash();
 
-		// TODO: extract this as a separate scoring function?
-		logProb = arc.getRule().getLogProb();
-		if (this.isTerminal() == false) {
-			for (ArrayList<Key<R, T>> keys : arc.getBackpointers()) {
-				assert keys != null : "null backpointer list when creating key from active arc: "
-						+ arc.toString();
-				for (Key<R, T> key : keys) {
-					logProb += key.logProb;
-				}
-			}
-		}
+//		// TODO: extract this as a separate scoring function?
+//		maxLogProb = arc.getRule().getLogProb();
+//		if (this.isTerminal() == false) {
+//			for (ArrayList<Key<R, T>> keys : arc.getBackpointers()) {
+//				assert keys != null : "null backpointer list when creating key from active arc: "
+//						+ arc.toString();
+//				for (Key<R, T> key : keys) {
+//					maxLogProb += key.maxLogProb;
+//				}
+//			}
+//		}
 	}
 
 	private int genHash() {
@@ -193,13 +197,39 @@ public class Key<R extends GrammarRule<T>, T extends Token> {
 		}
 	}
 
-	/**
-	 * Gets this score (in the log probability domain) associated with this key.
-	 * 
-	 * @return a log probability
-	 */
-	public double getLogProb() {
-		return logProb;
+//	/**
+//	 * Gets the score (in the log probability domain) associated with the best
+//	 * possible partial parse rooted at this <code>Key</code>.
+//	 * 
+//	 * @return a log probability
+//	 */
+//	public double getMaxLogProb() {
+//		return maxLogProb;
+//	}
+
+	public boolean formsCycle(int depth) {
+		return formsCycle(this, this, depth - 1);
+	}
+
+	private boolean formsCycle(Key<R, T> root, Key<R, T> currentKey, int depth) {
+
+		for (ArrayList<Key<R, T>> backpointers : currentKey.arc.getBackpointers()) {
+			if (backpointers != null) {
+				for (Key<R, T> backpointer : backpointers) {
+					if (backpointer.getRule().getLhs().equals(root.getRule().getLhs())) {
+						log.warning("CYCLE DETECTED: " + root.toString() + " TO "
+								+ currentKey.toString());
+						return true;
+					}
+					if (depth > 0) {
+						if (formsCycle(root, backpointer, depth - 1)) {
+							return true;
+						}
+					}
+				}
+			}
+		}
+		return false;
 	}
 
 	/**
@@ -213,32 +243,21 @@ public class Key<R extends GrammarRule<T>, T extends Token> {
 	 * @return an array of formatted parses
 	 */
 	@SuppressWarnings("unchecked")
-	public Parse<R, T>[] getPartialParses(ParseFormatter<R, T> formatter) {
+	public List<Parse<R, T>> getPartialParses(ParseFormatter<R, T> formatter) {
 
-		ArrayList<StringBuilder> currentList = new ArrayList<StringBuilder>();
-		currentList.add(new StringBuilder());
+		ArrayList<Parse<R, T>> list = new ArrayList<Parse<R,T>>();
+		list.add(new Parse<R,T>());
 
-		unpackNonterminalBackpointers(this, currentList, formatter);
+		unpackNonterminalBackpointers(this, list, formatter);
 
-		Parse<R, T>[] result = (Parse<R, T>[]) new Parse[currentList.size()];
-		for (int i = 0; i < currentList.size(); i++) {
-			String str = currentList.get(i).toString().trim();
-			result[i] = new Parse<R, T>(str);
-			result[i].setRoot(this);
-		}
-		return result;
+		return list;
 	}
 
-	private void unpackNonterminalBackpointers(Key<R, T> key, ArrayList<StringBuilder> currentList,
+	private void unpackNonterminalBackpointers(Key<R, T> key, ArrayList<Parse<R,T>> currentList,
 			ParseFormatter<R, T> formatter) {
 
-		// open parentheses (or other nonterminal formatting)
-		for (int i = 0; i < currentList.size(); i++) {
-			currentList.get(i).append(formatter.formatNonterminalBefore(key));
-		}
-
 		// iterate over all of the RHS constituents for this key
-		int[] alignment = formatter.getRhsAlignment(key);
+		int[] targetToSourceAlignment = formatter.getTargetToSourceRhsAlignment(key);
 		T[] transducedRhs = formatter.transduce(key);
 		ArrayList<Key<R, T>>[] backpointers = key.arc.getBackpointers();
 
@@ -254,43 +273,63 @@ public class Key<R extends GrammarRule<T>, T extends Token> {
 				outputTerminal(currentList, formatter, transducedRhs[targetRhsIndex]);
 			} else {
 
-				int sourceRhsIndex = alignment[targetRhsIndex];
-				assert backpointers[sourceRhsIndex] != null : "null backpointer list at index "
-						+ sourceRhsIndex + " for key " + key.toString();
-				outputNonterminal(key, currentList, formatter, backpointers[sourceRhsIndex]);
+				int sourceRhsIndex = targetToSourceAlignment[targetRhsIndex];
+				if (sourceRhsIndex == -1) {
+					log.severe("Error in rule: " + key.getRule().getRuleId()
+							+ " @ "
+							// + key.getRule().getFileAndLine().getName() + ":"
+							// + key.getRule().getLineNumber()
+							+ " -- target RHS non-terminal not aligned at position "
+							+ targetRhsIndex);
+				} else {
+
+					assert backpointers[sourceRhsIndex] != null : "null backpointer list at index "
+							+ sourceRhsIndex + " for key " + key.toString();
+					outputNonterminal(key, currentList, formatter, backpointers[sourceRhsIndex]);
+				}
 			}
 
 		}
 
-		// close parentheses (or other nonterminal formatting)
 		for (int i = 0; i < currentList.size(); i++) {
-			currentList.get(i).append(formatter.formatNonterminalAfter(key));
+			
+			// update parse scores
+			Parse<R, T> parse = currentList.get(i);
+			R rule = key.getRule();
+			double nodeScore = formatter.getScorer().accumulate(parse.getCurrentLogProb(), rule);
+			parse.setCurrentScore(nodeScore);
+			
+			// open parentheses (or other nonterminal formatting)
+			parse.prependToParse(formatter.formatNonterminalBefore(key, nodeScore));
+
+			// close parentheses (or other nonterminal formatting)
+			parse.appendToParse(formatter.formatNonterminalAfter(key, nodeScore));
 		}
 	}
 
-	private void outputTerminal(ArrayList<StringBuilder> currentList,
+	private void outputTerminal(ArrayList<Parse<R,T>> currentList,
 			ParseFormatter<R, T> formatter, T terminal) {
 
 		for (int j = 0; j < currentList.size(); j++) {
-			StringBuilder sb = currentList.get(j);
-			sb.append(formatter.formatTerminal(terminal));
+			Parse<R,T> parse = currentList.get(j);
+			parse.appendToParse(formatter.formatTerminal(terminal));
 		}
 
 	}
 
-	private void outputNonterminal(Key<R, T> key, ArrayList<StringBuilder> currentList,
+	private void outputNonterminal(Key<R, T> key, ArrayList<Parse<R,T>> currentList,
 			ParseFormatter<R, T> formatter, ArrayList<Key<R, T>> nonterminalBackpointers) {
 
 		// expand the list to the size of the pack
 		int nAmbiguities = nonterminalBackpointers.size();
-		ArrayList<StringBuilder>[] miniList = new ArrayList[nAmbiguities];
+		ArrayList<Parse<R,T>>[] miniList = new ArrayList[nAmbiguities];
 
 		// iterate over all of the ambiguities packed into this key
 		// for the current RHS constituent
 		for (int j = 0; j < nAmbiguities; j++) {
-			miniList[j] = new ArrayList<StringBuilder>(currentList.size());
-			for (final StringBuilder sb : currentList)
-				miniList[j].add(new StringBuilder(sb));
+			miniList[j] = new ArrayList<Parse<R,T>>(currentList.size());
+			for (final Parse<R,T> parse : currentList)
+				miniList[j].add(new Parse<R,T>(parse));
 			Key<R, T> backpointer = nonterminalBackpointers.get(j);
 
 			unpackNonterminalBackpointers(backpointer, miniList[j], formatter);

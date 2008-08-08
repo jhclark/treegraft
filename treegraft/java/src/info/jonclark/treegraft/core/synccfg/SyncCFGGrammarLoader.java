@@ -1,9 +1,7 @@
-package info.jonclark.treegraft.core;
+package info.jonclark.treegraft.core.synccfg;
 
-import info.jonclark.treegraft.chartparser.Key;
-import info.jonclark.treegraft.core.rules.GrammarRule;
-import info.jonclark.treegraft.core.rules.MonoCFGRule;
-import info.jonclark.treegraft.core.rules.SyncCFGRule;
+import info.jonclark.treegraft.core.grammar.Grammar;
+import info.jonclark.treegraft.core.rules.RuleException;
 import info.jonclark.treegraft.core.tokens.Token;
 import info.jonclark.treegraft.core.tokens.TokenFactory;
 import info.jonclark.treegraft.unification.Constraint;
@@ -15,126 +13,25 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.text.ParseException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-/**
- * Contains (and can read in) the rules with which input sequences will be
- * parsed.
- * 
- * @author Jonathan Clark
- * @param <R>
- *            The rule type being used in this <code>ChartParser</code>
- * @param <T>
- *            The token type being used in this <code>ChartParser</code>
- */
-public class Grammar<R extends GrammarRule<T>, T extends Token> {
-
-	public static final double DEFAULT_RULE_SCORE = 1.0;
-	public static final String[] DEFAULT_START_SYMBOLS = { "S" };
-
-	private List<R> emptyRuleList;
-	private HashMap<T, ArrayList<R>> rules = new HashMap<T, ArrayList<R>>();
-	private HashMap<T, ArrayList<R>> terminalInitialRules = new HashMap<T, ArrayList<R>>();
-	private HashSet<T> startSymbols = new HashSet<T>();
-	private static int nRules = 0;
-
-	protected Grammar(TokenFactory<T> tokenFactory, String[] startSymbols) {
-		for (String startSymbol : startSymbols) {
-			this.startSymbols.add(tokenFactory.makeToken(startSymbol, false));
-		}
-	}
-
-	/**
-	 * Reads in a monolingual grammar file (see included data files for an
-	 * example format).
-	 */
-	public static <T extends Token> Grammar<MonoCFGRule<T>, T> loadMonoGrammar(File file,
-			TokenFactory<T> tokenFactory) throws IOException, ParseException {
-
-		Grammar<MonoCFGRule<T>, T> grammar =
-				new Grammar<MonoCFGRule<T>, T>(tokenFactory, DEFAULT_START_SYMBOLS);
-
-		BufferedReader in = new BufferedReader(new FileReader(file));
-		ArrayList<MonoCFGRule<T>> ruleList = new ArrayList<MonoCFGRule<T>>();
-		grammar.emptyRuleList = new ArrayList<MonoCFGRule<T>>(0);
-
-		int nLine = 0;
-		String line;
-		while ((line = in.readLine()) != null) {
-			nLine++;
-			line = line.trim();
-
-			String arrow = "";
-			if (line.equals("")) {
-				// skip blank lines
-				continue;
-
-			} else if (line.startsWith(";")) {
-				// skip comment lines
-				continue;
-
-			} else if (line.contains("=>")) {
-
-				// parse monolingual non-terminal rules
-				String id = line;
-				String strLhs = StringUtils.substringBefore(line, "=>").trim();
-				T lhs = tokenFactory.makeToken(strLhs, false);
-				String after = StringUtils.substringAfter(line, "=>").trim();
-				T[] rhs = tokenizeRhs(after, tokenFactory);
-
-				MonoCFGRule<T> rule = new MonoCFGRule<T>(lhs, rhs, null, id, file, nLine);
-				ruleList.add(rule);
-
-				ArrayList<MonoCFGRule<T>> existingRules = grammar.rules.get(rhs[0]);
-				if (existingRules == null) {
-					existingRules = new ArrayList<MonoCFGRule<T>>();
-					grammar.rules.put(rhs[0], existingRules);
-				}
-				existingRules.add(rule);
-
-				// parse lexical rules
-			} else if (line.contains("->")) {
-				String id = line;
-				String pos = StringUtils.substringBefore(line, "->").trim();
-				T lhs = tokenFactory.makeToken(pos, false);
-				String word = StringUtils.substringAfter(line, "->").trim();
-				T rhsWord = tokenFactory.makeToken(word, true);
-				T[] rhsArr = (T[]) new Token[] { rhsWord };
-
-				MonoCFGRule<T> newRule =
-						new MonoCFGRule<T>(lhs, rhsArr, new Constraint[0], id, file, nLine);
-
-				ArrayList<MonoCFGRule<T>> existingRules =
-						grammar.terminalInitialRules.get(rhsArr[0]);
-				if (existingRules == null) {
-					existingRules = new ArrayList<MonoCFGRule<T>>();
-					grammar.terminalInitialRules.put(rhsArr[0], existingRules);
-				}
-				existingRules.add(newRule);
-			}
-		}
-
-		in.close();
-
-		return grammar;
-	}
+public class SyncCFGGrammarLoader {
 
 	/**
 	 * Reads in a synchronous grammar file (see included data files for example
 	 * format).
+	 * 
+	 * @throws RuleException
 	 */
 	public static <T extends Token> Grammar<SyncCFGRule<T>, T> loadSyncGrammar(File file,
-			TokenFactory<T> tokenFactory) throws IOException, ParseException {
+			TokenFactory<T> tokenFactory, HashSet<T> vocabulary) throws IOException, ParseException, RuleException {
 
 		Grammar<SyncCFGRule<T>, T> grammar =
-				new Grammar<SyncCFGRule<T>, T>(tokenFactory, DEFAULT_START_SYMBOLS);
+				new Grammar<SyncCFGRule<T>, T>(tokenFactory, Grammar.DEFAULT_START_SYMBOLS,
+						vocabulary);
 
 		BufferedReader in = new BufferedReader(new FileReader(file));
-		ArrayList<SyncCFGRule<T>> ruleList = new ArrayList<SyncCFGRule<T>>();
-		grammar.emptyRuleList = new ArrayList<SyncCFGRule<T>>(0);
 
 		String ruleId = null;
 
@@ -157,9 +54,6 @@ public class Grammar<R extends GrammarRule<T>, T extends Token> {
 
 			} else if (line.startsWith("{")) {
 				ruleId = StringUtils.substringBetween(line, "{", "}");
-				nRules++;
-				if (nRules % 100000 == 0)
-					System.out.println("Read " + nRules + " so far...");
 
 			} else if (line.contains("->")) {
 
@@ -210,27 +104,8 @@ public class Grammar<R extends GrammarRule<T>, T extends Token> {
 						new SyncCFGRule<T>(sourceLhs, sourceRhs, targetLhs, targetRhs, ruleId,
 								ruleFeatures.alignment, ruleFeatures.score,
 								ruleFeatures.getConstraintArray(), file, nLine.get());
-				ruleList.add(rule);
 
-				if (lexicalInitial) {
-					T lexicalToken = sourceRhs[0];
-
-					ArrayList<SyncCFGRule<T>> existingRules =
-							grammar.terminalInitialRules.get(lexicalToken);
-					if (existingRules == null) {
-						existingRules = new ArrayList<SyncCFGRule<T>>();
-						grammar.terminalInitialRules.put(lexicalToken, existingRules);
-					}
-					existingRules.add(rule);
-
-				} else {
-					ArrayList<SyncCFGRule<T>> existingRules = grammar.rules.get(sourceRhs[0]);
-					if (existingRules == null) {
-						existingRules = new ArrayList<SyncCFGRule<T>>();
-						grammar.rules.put(sourceRhs[0], existingRules);
-					}
-					existingRules.add(rule);
-				}
+				grammar.addRule(rule, lexicalInitial);
 
 			}
 		}
@@ -241,7 +116,7 @@ public class Grammar<R extends GrammarRule<T>, T extends Token> {
 	}
 
 	private static class RuleFeatures {
-		public double score = DEFAULT_RULE_SCORE;
+		public double score = Grammar.DEFAULT_RULE_SCORE;
 		public int[] alignment;
 		private ArrayList<Constraint> constraints;
 
@@ -371,47 +246,5 @@ public class Grammar<R extends GrammarRule<T>, T extends Token> {
 			}
 		}
 		return rhsToks;
-	}
-
-	/**
-	 * Gets rules whose source LHS begin with the specified terminal token.
-	 * 
-	 * @param word
-	 * @return
-	 */
-	public List<R> getTerminalInitialRules(T word) {
-		List<R> rules = this.terminalInitialRules.get(word);
-		if (rules == null) {
-			return emptyRuleList;
-		} else {
-			return rules;
-		}
-	}
-
-	/**
-	 * Gets rules whose source LHS begins with the specified key (which contains
-	 * a non-terminal token).
-	 * 
-	 * @param key
-	 * @return
-	 */
-	public List<R> getRulesStartingWith(Key<R, T> key) {
-		// if (useTopDownPredictions) {}
-		List<R> result = rules.get(key.getLhs());
-		if (result == null) {
-			return emptyRuleList;
-		} else {
-			return result;
-		}
-	}
-
-	/**
-	 * Determines if a terminal or non-terminal token is a start symbol.
-	 * 
-	 * @param token the token in question
-	 * @return True if the token is a start symbol; false otherwise
-	 */
-	public boolean isStartSymbol(T token) {
-		return startSymbols.contains(token);
 	}
 }

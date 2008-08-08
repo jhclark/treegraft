@@ -32,8 +32,10 @@ public class ActiveArc<R extends GrammarRule<T>, T extends Token> {
 
 	private final int startIndex;
 	private final int endIndex;
+	private final int dot;
 	private final R rule;
-	private final ArrayList<Key<R, T>>[] backpointers;
+	private ArrayList<Key<R, T>>[] backpointers;
+	private ActiveArc<R, T> extendedSelf = null;
 
 	/**
 	 * Creates a new <code>ActiveArc</code>.
@@ -56,13 +58,16 @@ public class ActiveArc<R extends GrammarRule<T>, T extends Token> {
 		this.startIndex = startIndex;
 		this.endIndex = endIndex;
 		this.rule = rule;
-		this.backpointers = (ArrayList<Key<R, T>>[]) new ArrayList[dot];
+		this.dot = dot;
+		this.backpointers = (ArrayList<Key<R, T>>[]) new ArrayList[rule.getRhs().length];
 	}
 
 	/**
 	 * Creates a new <code>ActiveArc</code> given a <code>Key</code>, which
 	 * matches the next source-side RHS, which is needed by this
-	 * <code>ActiveArc</code>. Typically, only
+	 * <code>ActiveArc</code> OR if such an arc has already been created, a
+	 * backpointer is simply added; thus, this is the primary method responsible
+	 * for ambiguity packing in the <code>ChartParser</code>. Typically, only
 	 * <code>ActiveArcManager.extendArcs</code> should need to call this method.
 	 * 
 	 * @param key
@@ -78,13 +83,19 @@ public class ActiveArc<R extends GrammarRule<T>, T extends Token> {
 
 		assert this.getEndIndex() == key.getStartIndex() : "Discontiguous arc extension.";
 
-		ActiveArc<R, T> extendedArc =
-				(ActiveArc<R, T>) new ActiveArc(this.getStartIndex(), key.getEndIndex(),
-						this.getDot() + 1, this.getRule());
-		System.arraycopy(this.backpointers, 0, extendedArc.backpointers, 0,
-				this.backpointers.length);
-		extendedArc.addBackpointer(this.getDot(), key);
-		return extendedArc;
+		if (extendedSelf == null) {
+			extendedSelf =
+					(ActiveArc<R, T>) new ActiveArc(this.getStartIndex(), key.getEndIndex(),
+							this.getDot() + 1, this.getRule());
+			// since there is only ever one ActiveArc per rule type,
+			// we can share this backpointer array between ActiveArc instances
+			// and get big savings on time and space complexity
+			extendedSelf.backpointers = this.backpointers;
+//			System.arraycopy(this.backpointers, 0, extendedSelf.backpointers, 0,
+//					this.backpointers.length);
+		}
+		extendedSelf.addBackpointer(this.getDot(), key);
+		return extendedSelf;
 	}
 
 	/**
@@ -101,8 +112,8 @@ public class ActiveArc<R extends GrammarRule<T>, T extends Token> {
 	 */
 	public void addBackpointer(int index, Key<R, T> key) {
 
-		assert index < getDot() : "Index must fall to the left of the dot for this ActiveArc: " + index
-				+ " !< " + getDot();
+		assert index < getDot() : "Index must fall to the left of the dot for this ActiveArc: "
+				+ index + " !< " + getDot();
 
 		if (backpointers[index] == null) {
 			backpointers[index] = new ArrayList<Key<R, T>>(DEFAULT_BACKPOINTER_LIST_SIZE);
@@ -178,7 +189,7 @@ public class ActiveArc<R extends GrammarRule<T>, T extends Token> {
 	 * @return the dot position
 	 */
 	public int getDot() {
-		return backpointers.length;
+		return dot;
 	}
 
 	/**

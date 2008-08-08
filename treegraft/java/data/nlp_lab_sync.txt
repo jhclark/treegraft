@@ -5,6 +5,13 @@ S::S : [NP VP] -> [VP NP]
 	(X2::Y1)
 )
 
+S::S : [NP VP] -> [NP XP]
+(
+	(*score* 1.0)
+	(X1::Y1)
+	(X2::Y2)
+)
+
 NP::NP : [ART ADJ N] -> [ART ADJ N]
 (
 	(*score* 1.0)
@@ -33,21 +40,24 @@ NP::NP : [N] -> [N]
 	(X1::Y1)
 )
 
-VP::VP : [AUX VP] -> [VP AUX]
+VP::VP : [AUX VP] -> [XP AUX]
 (
 	(*score* 1.0)
 	(X1::Y2)
 	(X2::Y1)
 )
 
-VP::ES_VP : [V NP] -> [NP V]
+; Target-side word insertion
+; Source-side LHS different from target-side LHS (this should cause the top-level S rule to fails)
+; Reordering
+VP::XP : [V NP] -> [NP "-san" V]
 (
 	(*score* 0.5)
-	(X1::Y2)
+	(X1::Y3)
 	(X2::Y1)
 )
 
-VP::VP : [VP PP] -> [VP PP]
+VP::XP : [VP PP] -> [VP PP]
 (
 	(*score* 1.0)
 	(X1::Y1)
@@ -85,6 +95,7 @@ V::V |: ["can"] -> ["kaikosaneru"]
 	(*score* 1.0)
 )
 
+; Along with the above rule, tests for same source word w/ different POS
 AUX::AUX |: ["can"] -> ["-dekiru"]
 (
 	(*score* 1.0)
@@ -93,6 +104,12 @@ AUX::AUX |: ["can"] -> ["-dekiru"]
 N::N |: ["can"] -> ["oke"]
 (
 	(*score* 1.0)
+)
+
+; Along with the above rule, tests for same source word & POS w/ different translsations
+N::N |: ["can"] -> ["can"]
+(
+	(*score* 0.5)
 )
 
 V::V |: ["holds"] -> ["kukumu"]

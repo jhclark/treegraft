@@ -41,7 +41,7 @@ public class StringTokenFactory extends TokenFactory<StringToken> {
 		StringToken tok = str2tok.get(key);
 		if (tok == null) {
 			tok = new StringToken(key, terminal);
-			str2tok.put(str, tok);
+			str2tok.put(key, tok);
 		}
 		return tok;
 	}

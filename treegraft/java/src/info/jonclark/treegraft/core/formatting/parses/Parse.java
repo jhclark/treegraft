@@ -1,5 +1,6 @@
-package info.jonclark.treegraft.core;
+package info.jonclark.treegraft.core.formatting.parses;
 
+import info.jonclark.lang.DoubleEndedStringBuilder;
 import info.jonclark.treegraft.chartparser.Key;
 import info.jonclark.treegraft.core.rules.GrammarRule;
 import info.jonclark.treegraft.core.tokens.Token;
@@ -10,15 +11,27 @@ import info.jonclark.treegraft.core.tokens.Token;
 public class Parse<R extends GrammarRule<T>, T extends Token> {
 
 	private Key<R, T> root;
-	private String lispTree;
+	private DoubleEndedStringBuilder lispTree;
+	private double currentScore;
 
 	/**
 	 * Create a new <code>Parse</code> from its string representation.
 	 * 
 	 * @param lispTree
 	 */
-	public Parse(String lispTree) {
-		this.lispTree = lispTree;
+	public Parse() {
+		this.lispTree = new DoubleEndedStringBuilder();
+	}
+	
+	/**
+	 * Copy constructor for parse
+	 * 
+	 * @param other
+	 */
+	public Parse(Parse other) {
+		this.root = other.root;
+		this.lispTree = new DoubleEndedStringBuilder(other.lispTree);
+		this.currentScore = other.currentScore;
 	}
 
 	/**
@@ -40,11 +53,28 @@ public class Parse<R extends GrammarRule<T>, T extends Token> {
 	public Key<R, T> getRoot() {
 		return root;
 	}
+	
+
+	public double getCurrentLogProb() {
+		return currentScore;
+	}
+
+	public void setCurrentScore(double currentScore) {
+		this.currentScore = currentScore;
+	}
+	
+	public void prependToParse(String str) {
+		lispTree.prepend(str);
+	}
+	
+	public void appendToParse(String str) {
+		lispTree.append(str);
+	}
 
 	/**
 	 * Get the string representation of this parse.
 	 */
 	public String toString() {
-		return lispTree;
+		return lispTree.toString().trim();
 	}
 }

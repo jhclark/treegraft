@@ -1,15 +1,17 @@
 package info.jonclark.treegraft.core.rules;
 
+import info.jonclark.treegraft.chartparser.Key;
+import info.jonclark.treegraft.core.synccfg.SyncCFGRule;
 import info.jonclark.treegraft.core.tokens.Token;
-import info.jonclark.treegraft.unification.Constraint;
-
-import java.io.File;
 
 /**
  * A basic grammar rule for a monolingual or transduction parser. Other data can
  * easily be placed inside both implementations of GrammarRule (as in
  * synchronous transduction information) and in the Token implementations (e.g.
- * tokens for use in factored translation).
+ * tokens for use in factored translation). Also, it is important for
+ * <code>GrammarRule</code> implementations to implement
+ * <code>equals(Object)</code> and <code>hashCode()</code> as these will be
+ * called many times for hashing by the <code>ActiveArcManager</code>.
  * 
  * @author Jonathan Clark
  * @param <T>
@@ -56,17 +58,16 @@ public interface GrammarRule<T extends Token> {
 	 * Get the number of seconds consumed by evaluating this rule during the
 	 * lifetime of this GrammarRule.
 	 * 
-	 * @return a time in seconds as a string
+	 * @return a time in seconds as a double
 	 */
-	public String getTimeCost();
+	public double getTimeCost();
 
 	/**
 	 * Get the unification constraints associated with this GrammarRule.
 	 * 
 	 * @return an array of constraints
 	 */
-	public Constraint[] getConstraints();
-
+	// public Constraint[] getConstraints();
 	/**
 	 * Get the score of this rule, in the log probability domain.
 	 * 
@@ -77,22 +78,43 @@ public interface GrammarRule<T extends Token> {
 	/**
 	 * Get the File in which this GrammarRule was defined.
 	 * 
-	 * @return a file, which can be converted into string representations for debugging
+	 * @return a file, which can be converted into string representations for
+	 *         debugging
 	 */
-	public File getFile();
-
+	// public File getFile();
 	/**
 	 * Get the line number of the grammar file on which this GrammarRule was
 	 * defined.
 	 * 
 	 * @return a line number as an integer
 	 */
-	public int getLineNumber();
-
+	// public int getLineNumber();
 	/**
 	 * Gets the user-specified identifier for this rule
 	 * 
 	 * @return an identifier string such as NP,1001
 	 */
 	public String getRuleId();
+
+	/**
+	 * Checks to make sure the proposed key can legally extend an
+	 * <code>ActiveArc</code> according to this rule.
+	 * 
+	 * @param <R>
+	 *            the <code>GrammarRule</code> type. This will likely need to be
+	 *            casted to the implementing type of GrammarRule. Though this
+	 *            could theoretically be made type safe, it would require
+	 *            passing around an unacceptable number of type paramaters and
+	 *            doing so in a way not technically supported by Java).
+	 * @param sourceRhsIndex
+	 *            the source-side RHS rule index that is about to be extended in
+	 *            an <code>ActiveArc</code>
+	 * @param key
+	 *            the proposed key to extend that arc
+	 * @return true if the proposed key is legal according to this rule; false
+	 *         otherwise.
+	 * @see SyncCFGRule
+	 */
+	public <R extends GrammarRule<T>> boolean areConstraintsSatisfied(int sourceRhsIndex,
+			Key<R, T> key);
 }

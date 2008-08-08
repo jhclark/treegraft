@@ -14,7 +14,7 @@ public class StringToken implements Token {
 	protected final boolean terminal;
 
 	protected StringToken(String str, boolean terminal) {
-		this.str = str.intern();
+		this.str = str;
 		this.terminal = terminal;
 	}
 
@@ -32,8 +32,7 @@ public class StringToken implements Token {
 		if (obj instanceof StringToken) {
 			StringToken tok = (StringToken) obj;
 
-			// make use of quick comparison for interned strings
-			return (this.str == tok.str);
+			return (this == tok);
 		} else if (obj instanceof String) {
 			String other = (String) obj;
 

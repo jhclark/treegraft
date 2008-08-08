@@ -1,7 +1,8 @@
-package info.jonclark.treegraft.core.rules;
+package info.jonclark.treegraft.core.monocfg;
 
 import info.jonclark.stat.SecondTimer;
-import info.jonclark.treegraft.core.formatting.parses.MonoParseFormatter;
+import info.jonclark.treegraft.chartparser.Key;
+import info.jonclark.treegraft.core.rules.GrammarRule;
 import info.jonclark.treegraft.core.tokens.Token;
 import info.jonclark.treegraft.unification.Constraint;
 import info.jonclark.util.StringUtils;
@@ -97,8 +98,8 @@ public class MonoCFGRule<T extends Token> implements GrammarRule<T> {
 	/**
 	 * {@inheritDoc}
 	 */
-	public String getTimeCost() {
-		return cost.getSecondsFormatted();
+	public double getTimeCost() {
+		return cost.getSeconds();
 	}
 
 	/**
@@ -111,7 +112,7 @@ public class MonoCFGRule<T extends Token> implements GrammarRule<T> {
 	/**
 	 * {@inheritDoc}
 	 */
-	public File getFile() {
+	public File getFileAndLine() {
 		return file;
 	}
 
@@ -134,6 +135,34 @@ public class MonoCFGRule<T extends Token> implements GrammarRule<T> {
 	 */
 	public String getRuleId() {
 		return id;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public <R extends GrammarRule<T>> boolean areConstraintsSatisfied(int sourceRhsIndex,
+			Key<R, T> key) {
+		
+		// no further constraints are needed for a monolingual CFG
+		return true;
+	}
+	
+	
+	/**
+	 * {@inheritDoc}
+	 */
+	public boolean equals(Object other) {
+		// each rule has a unique instance
+		return (this == other);
+	}
+	
+	/**
+	 * {@inheritDoc}
+	 */
+	public int hashCode() {
+		// hash based on our reference
+		return super.hashCode();
 	}
 
 	/**

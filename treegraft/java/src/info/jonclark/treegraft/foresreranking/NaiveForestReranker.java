@@ -3,7 +3,7 @@ package info.jonclark.treegraft.foresreranking;
 import java.util.List;
 
 import info.jonclark.treegraft.chartparser.Chart;
-import info.jonclark.treegraft.core.Parse;
+import info.jonclark.treegraft.core.formatting.parses.Parse;
 import info.jonclark.treegraft.core.rules.GrammarRule;
 import info.jonclark.treegraft.core.tokens.Token;
 import info.jonclark.treegraft.search.Beam;

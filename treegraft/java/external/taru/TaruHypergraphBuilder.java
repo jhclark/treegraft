@@ -4,7 +4,7 @@ import hyperGraph.HGVertex;
 import hyperGraph.HyperGraph;
 import info.jonclark.treegraft.chartparser.Key;
 import info.jonclark.treegraft.core.formatting.forest.ParseForestFormatter;
-import info.jonclark.treegraft.core.rules.GrammarRule;
+import info.jonclark.treegraft.core.synccfg.SyncCFGRule;
 import info.jonclark.treegraft.core.tokens.Token;
 import info.jonclark.treegraft.core.tokens.TokenFactory;
 
@@ -20,15 +20,18 @@ import taruDecoder.Hypothesis;
  * @param <R>
  * @param <T>
  */
-public class TaruHypergraphBuilder<R extends GrammarRule<T>, T extends Token> extends
+public class TaruHypergraphBuilder<R extends SyncCFGRule<T>, T extends Token> extends
 		ParseForestFormatter<R, T, HyperGraph> {
 
 	private HyperGraph graph;
 	private TokenFactory<T> tokenFactory;
-	private final HashMap<Key<R, T>, Integer> ids = new HashMap<Key<R, T>, Integer>();
+	private final HashMap<Key<R, T>, Integer> nonterminalIds = new HashMap<Key<R, T>, Integer>();
+	private final HashMap<T, Integer> terminalIds = new HashMap<T, Integer>();
 
 	public static final int DEFAULT_VERTEX_COUNT = 100000;
 
+	private static final int INSERTION_START = -1;
+	private static final int INSERTION_END = -1;
 	private static final String TERMINAL_TYPE = "X";
 	private static final int DEFAULT_EDGE_INDEX = -1;
 	private static final int[] DEFAULT_KINDEX = { -1, -1 };
@@ -42,53 +45,83 @@ public class TaruHypergraphBuilder<R extends GrammarRule<T>, T extends Token> ex
 
 	@Override
 	public void addNonterminal(Key<R, T> key) {
-		String type = tokenFactory.getTokenAsString(key.getRule().getLhs());
-		createVertexAndHyperedges(key, type, "");
-	}
 
-	@Override
-	public void addTerminal(Key<R, T> key) {
+		System.out.println("ADDING NONTERMINAL: " + key);
 
-		// TODO: What if a single terminal key has multiple translations?
-		// TODO: This is only dealing with the source side; what about target
-		// sides?
-		String words = tokenFactory.getTokenAsString(key.getWord());
-		createVertexAndHyperedges(key, TERMINAL_TYPE, words);
-	}
-
-	private void createVertexAndHyperedges(Key<R, T> key, String type, String words) {
-
-		// create vertex
-		HGVertex vertex = new HGVertex(key.getStartIndex(), key.getEndIndex(), type);
-		int id = graph.addVertex(vertex);
-		ids.put(key, id);
-
-		Hypothesis hypothesis = new Hypothesis(words, DEFAULT_EDGE_INDEX, DEFAULT_KINDEX);
-		vertex.addHypothesis(hypothesis);
-
-		// TODO: Inserted RHS items? -1, -1 for inserted target items
+		String nonterminalType = tokenFactory.getTokenAsString(key.getRule().getLhs());
+		HGVertex nonterminalVertex =
+				new HGVertex(key.getStartIndex(), key.getEndIndex(), nonterminalType);
+		int nonterminalId = graph.addVertex(nonterminalVertex);
+		nonterminalIds.put(key, nonterminalId);
 
 		// create edge
 		ArrayList<Key<R, T>>[] backpointers = key.getActiveArc().getBackpointers();
 
-		String ruleId = key.getRule().getRuleId();
-		int goal = id;
-		int[] items = new int[backpointers.length];
+		// check for any terminals coming off of this key
+		for (T token : key.getRule().getTargetRhs()) {
+			if (token.isTerminal()) {
 
-		permuteEdgesIntoHyperedges(items, backpointers, ruleId, goal, 0);
+				String words = tokenFactory.getTokenAsString(token);
+				System.out.println("ADDING TERMINAL: " + words);
+
+				HGVertex terminalVertex =
+						new HGVertex(INSERTION_START, INSERTION_END, TERMINAL_TYPE);
+				int terminalId = graph.addVertex(terminalVertex);
+				terminalIds.put(token, terminalId);
+
+				Hypothesis hypothesis = new Hypothesis(words, DEFAULT_EDGE_INDEX, DEFAULT_KINDEX);
+				terminalVertex.addHypothesis(hypothesis);
+			}
+		}
+
+		// prepare to turn edges into hyperedges
+		String ruleId = key.getRule().getRuleId();
+		T[] targetRhs = key.getRule().getTargetRhs();
+		int[] items = new int[targetRhs.length];
+
+		int[] alignment = key.getRule().getTargetToSourceAlignment();
+		assert alignment.length == targetRhs.length : "length mismatch";
+
+		permuteEdgesIntoHyperedges(key, items, alignment, targetRhs, backpointers, ruleId,
+				nonterminalId, 0);
 	}
 
-	private void permuteEdgesIntoHyperedges(int[] items, ArrayList<Key<R, T>>[] backpointers,
-			String ruleId, int goal, int position) {
+	private void permuteEdgesIntoHyperedges(Key<R, T> parent, int[] items, int[] alignment,
+			T[] targetRhs, ArrayList<Key<R, T>>[] backpointers, String ruleId, int goal,
+			int targetPosition) {
 
-		for (Key<R, T> key : backpointers[position]) {
-			int item = ids.get(key);
-			items[position] = item;
+		if (alignment[targetPosition] == -1) {
 
-			if (position < backpointers.length - 1) {
-				permuteEdgesIntoHyperedges(items, backpointers, ruleId, goal, position + 1);
-			} else {
-				graph.addEdge(items, goal, ruleId);
+			// handle insertion of terminals, which will have only dummy
+			// backpointers
+			int terminalId = terminalIds.get(targetRhs[targetPosition]);
+			items[targetPosition] = terminalId;
+
+		} else {
+
+			int sourcePosition = alignment[targetPosition];
+			
+			for (Key<R, T> sourceKey : backpointers[sourcePosition]) {
+
+				Integer nonterminalId = nonterminalIds.get(sourceKey);
+				if (nonterminalId == null) {
+					throw new RuntimeException(
+							"Child backpointer has not yet been assigned an ID: " + sourceKey.toString()
+									+ " -- for parent: " + parent.toString());
+				} else {
+					items[targetPosition] = nonterminalId;
+
+					if (targetPosition < targetRhs.length - 1) {
+
+						// continue to the end of the target RHS rule...
+						permuteEdgesIntoHyperedges(parent, items, alignment, targetRhs,
+								backpointers, ruleId, goal, targetPosition + 1);
+					} else {
+
+						// ...and then add the edge
+						graph.addEdge(items, goal, ruleId);
+					}
+				}
 			}
 		}
 	}

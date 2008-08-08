@@ -1,7 +1,7 @@
-package info.jonclark.treegraft.core.rules;
+package info.jonclark.treegraft.core.monocfg;
 
-import info.jonclark.treegraft.core.formatting.parses.MonoParseFormatter;
 import info.jonclark.treegraft.core.formatting.parses.ParseFormatter;
+import info.jonclark.treegraft.core.rules.RuleFactory;
 import info.jonclark.treegraft.core.tokens.Token;
 import info.jonclark.treegraft.core.tokens.TokenFactory;
 import info.jonclark.treegraft.unification.Constraint;

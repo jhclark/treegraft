@@ -1,14 +1,6 @@
 package info.jonclark.treegraft.glr;
 
-import info.jonclark.treegraft.core.Grammar;
-import info.jonclark.treegraft.core.rules.DottedGrammarRule;
-import info.jonclark.treegraft.core.rules.GrammarRule;
-import info.jonclark.treegraft.core.rules.MonoCFGRule;
-import info.jonclark.util.HashUtils;
-
-import java.io.File;
-import java.util.ArrayList;
-import java.util.HashMap;
+import info.jonclark.treegraft.core.grammar.Grammar;
 
 public class SLRTableCompiler {
 	public static SLRTable compile(Grammar grammar) {

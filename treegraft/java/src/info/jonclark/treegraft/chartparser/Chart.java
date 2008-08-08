@@ -1,7 +1,7 @@
 package info.jonclark.treegraft.chartparser;
 
-import info.jonclark.treegraft.core.Parse;
 import info.jonclark.treegraft.core.formatting.forest.ParseForestFormatter;
+import info.jonclark.treegraft.core.formatting.parses.Parse;
 import info.jonclark.treegraft.core.formatting.parses.ParseFormatter;
 import info.jonclark.treegraft.core.rules.GrammarRule;
 import info.jonclark.treegraft.core.tokens.Token;
@@ -28,7 +28,7 @@ public class Chart<R extends GrammarRule<T>, T extends Token> {
 	 * A wrapper for ambiguity lists that handle the packing of arcs. See also
 	 * ActiveArcManager.PackedArc
 	 */
-	private class PackedKey {
+	private class KeyGroup {
 		// TODO: exchange array list for a scored beam
 		public ArrayList<Key<R, T>> list =
 				new ArrayList<Key<R, T>>(ActiveArcManager.DEFAULT_PACKING_SIZE);
@@ -39,8 +39,8 @@ public class Chart<R extends GrammarRule<T>, T extends Token> {
 	 */
 	public static final int DEFAULT_CHART_SIZE = 10000;
 
-	private final HashMap<Key<R, T>, PackedKey> chart =
-			new HashMap<Key<R, T>, PackedKey>(DEFAULT_CHART_SIZE);
+	private final HashMap<Key<R, T>, KeyGroup> chart =
+			new HashMap<Key<R, T>, KeyGroup>(DEFAULT_CHART_SIZE);
 	private final ArrayList<Key<R, T>> parses = new ArrayList<Key<R, T>>();
 	private final ArrayList<Key<R, T>> keys = new ArrayList<Key<R, T>>(DEFAULT_CHART_SIZE);
 
@@ -62,11 +62,11 @@ public class Chart<R extends GrammarRule<T>, T extends Token> {
 		keys.add(key);
 	}
 
-	private void append(Map<Key<R, T>, PackedKey> map, Key<R, T> key, Key<R, T> valueToAppend) {
+	private void append(Map<Key<R, T>, KeyGroup> map, Key<R, T> key, Key<R, T> valueToAppend) {
 
-		PackedKey packedKey = map.get(key);
+		KeyGroup packedKey = map.get(key);
 		if (packedKey == null) {
-			packedKey = new PackedKey();
+			packedKey = new KeyGroup();
 			map.put(key, packedKey);
 		}
 		packedKey.list.add(valueToAppend);
@@ -143,7 +143,7 @@ public class Chart<R extends GrammarRule<T>, T extends Token> {
 
 		for (Key<R, T> key : keys) {
 			if (key.isTerminal()) {
-				formatter.addTerminal(key);
+//				formatter.addTerminal(key);
 			} else {
 				formatter.addNonterminal(key);
 			}

@@ -26,16 +26,6 @@ public abstract class ParseForestFormatter<R extends GrammarRule<T>, T extends T
 	 *            the key to be added
 	 */
 	public abstract void addNonterminal(Key<R, T> key);
-
-	/**
-	 * Adds a terminal <code>Key</code> to the parse forest being built
-	 * internally by this <code>ParseForestFormatter</code>.
-	 * 
-	 * @param key
-	 *            the key to be added
-	 */
-	public abstract void addTerminal(Key<R, T> key);
-
 	/**
 	 * Gets the finished parse forest of type F that was created by this
 	 * <code>ParseForestFormatter</code>.
