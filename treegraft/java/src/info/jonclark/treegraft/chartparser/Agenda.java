@@ -23,6 +23,11 @@ import java.util.Queue;
 public class Agenda<R extends GrammarRule<T>, T extends Token> {
 
 	private final Queue<Key<R, T>> q = new LinkedList<Key<R, T>>();
+	private final Chart<R, T> chart;
+
+	public Agenda(Chart<R, T> chart) {
+		this.chart = chart;
+	}
 
 	/**
 	 * Checks to see if the <code>Agenda</code> is empty.
@@ -33,15 +38,66 @@ public class Agenda<R extends GrammarRule<T>, T extends Token> {
 		return q.isEmpty();
 	}
 
+	public int size() {
+		return q.size();
+	}
+
 	/**
-	 * Adds a newly completed <code>Key</code> to the <code>Agenda</code> until
-	 * it can be processed and added to the <code>Chart</code>.
+	 * Adds a newly completed <code>ActiveArc</code> to the <code>Agenda</code>
+	 * as a <code>Key</code> until it can be processed and added to the
+	 * <code>Chart</code>; this method also handles the packing of ActiveArcs
+	 * with the same LHS and different RHS's into a single Key.
 	 * 
-	 * @param key
-	 *            the key to be added
+	 * @param completedArc
+	 *            the arc to be added as a new key or packed into an existing
+	 *            key
 	 */
-	public void add(Key<R, T> key) {
-		q.add(key);
+	public void addKeyToChartAndAgenda(ActiveArc<R, T> completedArc) {
+
+		Key<R, T> newKey = null;
+
+		// first, try to look up an existing key
+		if (ActiveArcManager.DO_AMBIGUITY_PACKING) {
+			// TODO: Grab key from cache here
+		}
+
+		// if no key was found, add a new one
+		if (newKey == null) {
+			newKey = new Key<R, T>(completedArc, null);
+		} else {
+			newKey.addCompletedArc(completedArc);
+		}
+
+		// assert q.contains(newKey) == false :
+		// "Agenda already contains duplicate key: "
+		// + newKey.toString();
+		// assert chart.contains(newKey) == false :
+		// "Chart already contains duplicate key: " + newKey;
+
+		q.add(newKey);
+		chart.addKey(newKey);
+
+		// now do blame assignment
+		blame(completedArc);
+	}
+
+	/**
+	 * Recursively increment the counters of all rules that directly or
+	 * indirectly caused the creation of this completed arc (key).
+	 * 
+	 * @param arc
+	 */
+	private void blame(ActiveArc<R, T> arc) {
+		for (R rule : arc.getRules()) {
+			rule.incrementKeysCreated();
+		}
+		for (int i = 0; i < arc.getRhs().length; i++) {
+			for (Key<R, T> backpointer : arc.getBackpointers(i)) {
+				for (ActiveArc<R, T> child : backpointer.getActiveArcs()) {
+//					blame(child);
+				}
+			}
+		}
 	}
 
 	/**
@@ -53,6 +109,10 @@ public class Agenda<R extends GrammarRule<T>, T extends Token> {
 	 */
 	public Key<R, T> get() {
 		return q.remove();
+	}
+
+	public boolean contains(Key<R, T> key) {
+		return q.contains(key);
 	}
 
 	/**

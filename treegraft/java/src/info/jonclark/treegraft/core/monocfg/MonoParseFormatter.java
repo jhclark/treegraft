@@ -13,21 +13,22 @@ import info.jonclark.treegraft.core.tokens.TokenFactory;
 public class MonoParseFormatter<T extends Token> extends ParseFormatter<MonoCFGRule<T>, T> {
 
 	private final TokenFactory<T> tokenFactory;
-	private final ParseScorer<MonoCFGRule<T>,T> scorer = new BasicScorer<MonoCFGRule<T>, T>();
+	private final ParseScorer<MonoCFGRule<T>, T> scorer = new BasicScorer<MonoCFGRule<T>, T>();
 
 	public MonoParseFormatter(TokenFactory<T> tokenFactory) {
 		this.tokenFactory = tokenFactory;
 	}
 
 	@Override
-	public String formatNonterminalAfter(Key<MonoCFGRule<T>, T> key, double score) {
+	public String formatNonterminalAfter(Key<MonoCFGRule<T>, T> key, MonoCFGRule<T> rule,
+			double score) {
 		return ")";
 	}
 
 	@Override
-	public String formatNonterminalBefore(Key<MonoCFGRule<T>, T> key, double score) {
-		return "(" + tokenFactory.getTokenAsString(key.getActiveArc().getRule().getLhs())
-				+ " ";
+	public String formatNonterminalBefore(Key<MonoCFGRule<T>, T> key, MonoCFGRule<T> rule,
+			double score) {
+		return "(" + tokenFactory.getTokenAsString(key.getLhs()) + " ";
 	}
 
 	@Override
@@ -36,13 +37,13 @@ public class MonoParseFormatter<T extends Token> extends ParseFormatter<MonoCFGR
 	}
 
 	@Override
-	public int[] getTargetToSourceRhsAlignment(Key<MonoCFGRule<T>, T> key) {
-		return super.getMonotonicAlignment(key.getRule().getRhs().length);
+	public int[] getTargetToSourceRhsAlignment(Key<MonoCFGRule<T>, T> key, MonoCFGRule<T> rule) {
+		return super.getMonotonicAlignment(rule.getRhs().length);
 	}
 
 	@Override
-	public T[] transduce(Key<MonoCFGRule<T>, T> key) {
-		return key.getRule().getRhs();
+	public T[] transduce(Key<MonoCFGRule<T>, T> key, MonoCFGRule<T> rule) {
+		return rule.getRhs();
 	}
 
 	@Override

@@ -43,7 +43,7 @@ public class SyncCFGRuleFactory<T extends Token> implements RuleFactory<SyncCFGR
 	public SyncCFGRule<T> makeDummyRule(T token) {
 		try {
 			return new SyncCFGRule<T>(token, (T[]) new Token[] { token }, null, null, null,
-					new int[1], Grammar.DEFAULT_RULE_SCORE, new Constraint[0], new File("null"), 0);
+					new int[1], Grammar.DEFAULT_RULE_SCORE, new Constraint[0], new File("null"), 0, tokenFactory);
 		} catch (RuleException e) {
 			throw new RuntimeException(e);
 		}

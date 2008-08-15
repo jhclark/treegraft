@@ -1,20 +1,14 @@
 package info.jonclark.treegraft.chartparser;
 
 import info.jonclark.log.LogUtils;
-import info.jonclark.treegraft.core.formatting.parses.Parse;
-import info.jonclark.treegraft.core.formatting.parses.ParseFormatter;
+import info.jonclark.stat.ProfilerTimer;
 import info.jonclark.treegraft.core.grammar.Grammar;
 import info.jonclark.treegraft.core.rules.GrammarRule;
 import info.jonclark.treegraft.core.rules.RuleFactory;
 import info.jonclark.treegraft.core.tokens.Token;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -31,11 +25,42 @@ public class ChartParser<R extends GrammarRule<T>, T extends Token> {
 
 	private Grammar<R, T> grammar;
 	private RuleFactory<R, T> ruleFactory;
+
 	private static final Logger log = LogUtils.getLogger();
 
+	private final ProfilerTimer parserTimer;
+	private final ProfilerTimer lexicalLookup;
+	private final ProfilerTimer lexicalArcExtending;
+	private final ProfilerTimer lexicalArcAdding;
+	private final ProfilerTimer nonterminalLookup;
+	private final ProfilerTimer nonterminalArcCreation;
+	private final ProfilerTimer nonterminalArcExtending;
+	private final ProfilerTimer nonterminalArcAdding;
+
+	private boolean updated = false;
+
 	public ChartParser(RuleFactory<R, T> ruleFactory, Grammar<R, T> grammar) {
+		this(ruleFactory, grammar, null);
+	}
+
+	public ChartParser(RuleFactory<R, T> ruleFactory, Grammar<R, T> grammar,
+			ProfilerTimer parentTimer) {
 		this.ruleFactory = ruleFactory;
 		this.grammar = grammar;
+		this.parserTimer = ProfilerTimer.newTimer("ChartParser", parentTimer, true, false);
+		this.lexicalLookup = ProfilerTimer.newTimer("lexicalLookup", parserTimer, true, false);
+		this.lexicalArcExtending =
+				ProfilerTimer.newTimer("lexicalArcExtending", parserTimer, true, false);
+		this.lexicalArcAdding =
+				ProfilerTimer.newTimer("lexicalArcAdding", parserTimer, true, false);
+		this.nonterminalLookup =
+				ProfilerTimer.newTimer("nonterminalLookup", parserTimer, true, false);
+		this.nonterminalArcCreation =
+				ProfilerTimer.newTimer("nonterminalArcCreation", parserTimer, true, false);
+		this.nonterminalArcExtending =
+				ProfilerTimer.newTimer("nonterminalArcExtending", parserTimer, true, false);
+		this.nonterminalArcAdding =
+				ProfilerTimer.newTimer("nonterminalArcAdding", parserTimer, true, false);
 	}
 
 	/**
@@ -48,25 +73,28 @@ public class ChartParser<R extends GrammarRule<T>, T extends Token> {
 	 * @param input
 	 * @param chart
 	 */
-	public void parse(T[] input, Chart<R, T> chart) {
+	public Chart<R, T> parse(T[] input) {
 
-		Agenda<R, T> agenda = new Agenda<R, T>();
-		ActiveArcManager<R, T> arcMan = new ActiveArcManager<R, T>(input.length);
+		parserTimer.go();
+
+		Chart<R, T> chart = new Chart<R, T>(input.length);
+		Agenda<R, T> agenda = new Agenda<R, T>(chart);
+		ActiveArcManager<R, T> arcMan = new ActiveArcManager<R, T>(input.length, parserTimer);
 		// ConstraintEngine constraintEngine = new ConstraintEngine();
 
 		// do a post-mortem analysis of what was taking so @#$! long if the user
 		// kills the process with Ctrl+C or it otherwise dies unexpectedly
-		// Runtime.getRuntime().addShutdownHook(new Thread() {
-		// public void run() {
-		// ArrayList<R> slowRules = grammar.getNSlowestRules(10);
-		// System.out.println("TOP 10 MOST EXPENSIVE RULES: ");
-		// for (int i = 0; i < slowRules.size(); i++) {
-		// R rule = slowRules.get(i);
-		// System.out.println((i + 1) + ": " + rule.toString() + " = "
-		// + rule.getTimeCost() + " seconds");
-		// }
-		// }
-		// });
+		Runtime.getRuntime().addShutdownHook(new Thread() {
+			public void run() {
+				ArrayList<R> slowRules = grammar.getNMostProductiveRules(100);
+				System.out.println("TOP 10 MOST PRODUCTIVE RULES: ");
+				for (int i = 0; i < slowRules.size(); i++) {
+					R rule = slowRules.get(i);
+					System.out.println((i + 1) + ": " + rule.toString() + " = "
+							+ rule.getKeysCreated() + " keys created directly or indirectly");
+				}
+			}
+		});
 
 		// step 1
 		int i = 0;
@@ -76,25 +104,30 @@ public class ChartParser<R extends GrammarRule<T>, T extends Token> {
 			// step 2 -- turn tokens into keys and/or active arcs
 			while (agenda.isEmpty() && i < input.length) {
 
+				Key<R, T> dummyTerminalKey = makeDummyKey(input[i], i);
+
+				lexicalLookup.go();
 				List<R> matchingLexicalRules = grammar.getTerminalInitialRules(input[i]);
 				for (final R lexicalRule : matchingLexicalRules) {
 
 					// make a new arc due to a lexical input
-					ActiveArc<R,T> ruleArc = arcMan.createTerminalArc(i, lexicalRule);
-
-					Key<R, T> dummyKey = makeDummyKey(input, i);
-					ruleArc.addBackpointer(0, dummyKey);
+					arcMan.createTerminalArc(i, lexicalRule, dummyTerminalKey);
 				}
+				lexicalLookup.pause();
 
 				// extend terminals in arcs created by previous tokens
 				// NOTE: Arcs we just added are extended by default
-				Key<R, T> dummyKey = makeDummyKey(input, i);
-				arcMan.extendArcs(dummyKey);
+				lexicalArcExtending.go();
+				arcMan.extendArcs(dummyTerminalKey);
+				lexicalArcExtending.pause();
 
+				// check for completed lexical arcs
+				lexicalArcAdding.go();
 				ActiveArc<R, T>[] completedArcs = arcMan.getAndClearCompletedArcs();
 				for (final ActiveArc<R, T> completedArc : completedArcs) {
-					agenda.add(new Key<R, T>(completedArc, null));
+					agenda.addKeyToChartAndAgenda(completedArc);
 				}
+				lexicalArcAdding.pause();
 
 				i++;
 				log.info("Now processing input symbol " + i + " of " + input.length);
@@ -110,53 +143,52 @@ public class ChartParser<R extends GrammarRule<T>, T extends Token> {
 			key.startTimer();
 
 			// check if this key begins a cycle, which we might want to break
-//			final int DEPTH = 3;
-//			if (key.formsCycle(DEPTH)) {
-//				continue;
-//			}
-
-			log.fine("PROCESSING KEY: " + key + " from rule " + key.getRule().toString());
+			// final int DEPTH = 3;
+			// if (key.formsCycle(DEPTH)) {
+			// continue;
+			// }
 
 			// TODO: use timers for partially completed arcs too
 
 			// step 4 -- add arcs beginning with this key
+			nonterminalLookup.go();
 			List<R> rules = grammar.getRulesStartingWith(key);
+			nonterminalLookup.pause();
+			nonterminalArcCreation.go();
 			for (final R rule : rules) {
-				
-				ActiveArc<R, T> extendedArc = arcMan.createNonterminalArc(key, rule);
-
-				// fill in the key that shows why the first RHS constituent is
-				// complete
-				extendedArc.addBackpointer(0, key);
+				arcMan.createNonterminalArc(key, rule);
 			}
+			nonterminalArcCreation.pause();
 
 			// step 5 -- extend all arcs using the current key
+			nonterminalArcExtending.go();
 			arcMan.extendArcs(key);
+			nonterminalArcExtending.pause();
 
 			// step 6 -- check for completed arcs
+			nonterminalArcAdding.go();
 			ActiveArc<R, T>[] completedArcs = arcMan.getAndClearCompletedArcs();
 			for (ActiveArc<R, T> completedArc : completedArcs) {
-
-				Key<R, T> newKey = new Key<R, T>(completedArc, null);
-				agenda.add(newKey);
+				agenda.addKeyToChartAndAgenda(completedArc);
 
 				// do some debug output
-				if (log.isLoggable(Level.FINE)) {
-					StringBuilder builder = new StringBuilder("NEW KEY: PARTIAL PARSE ");
-					for (ParseFormatter<R, T> formatter : ruleFactory.getDebugFormatters()) {
-						for (Parse<R, T> p : newKey.getPartialParses(formatter)) {
-							builder.append(" -> " + p.toString());
-						}
-					}
-					log.fine(builder.toString());
-				}
+				// if (log.isLoggable(Level.FINE)) {
+				// StringBuilder builder = new
+				// StringBuilder("NEW KEY: PARTIAL PARSE ");
+				// for (ParseFormatter<R, T> formatter :
+				// ruleFactory.getDebugFormatters()) {
+				// for (Parse<R, T> p : newKey.getPartialParses(formatter)) {
+				// builder.append(" -> " + p.toString());
+				// }
+				// }
+				// log.fine(builder.toString());
+				// }
 			}
+			nonterminalArcAdding.pause();
 
 			// step 7 -- add the key to the chart now that we've updated the
-			// state of all arcs
-			chart.addKey(key);
-
-			// TODO: In synchronous parsing, keys are not of the correct length
+			// state of all arcs (this has already been handled when we added
+			// the key to the Agenda so that we can better support key packing)
 
 			// step 8 -- check for completed parses
 			if (grammar.isStartSymbol(key.getLhs()) && key.getStartIndex() == 0
@@ -164,22 +196,32 @@ public class ChartParser<R extends GrammarRule<T>, T extends Token> {
 				chart.addParse(key);
 			}
 
+			if (chart.getKeys().size() % 1000 == 0) {
+				if (updated == false) {
+					log.info("Created " + arcMan.size() + " active arcs and "
+							+ chart.getKeys().size() + " keys so far...");
+				}
+				updated = true;
+			} else {
+				updated = false;
+			}
+
 			key.stopTimer();
 		} while (!agenda.isEmpty() || i < input.length);
 
-		log.info("Created " + arcMan.size() + " active arcs and " + chart.getKeys().size()
-				+ " keys.");
+		parserTimer.pause();
 
-		// we have now evaluated the CFG backbone
-		// if we got a full parse tree, only evaluate constraints for that
-		// otherwise, evaluate constraints for the whole chart
+		log.info("PARSING COMPLETE: Created " + arcMan.size() + " active arcs and "
+				+ chart.getKeys().size() + " keys.");
+
+		return chart;
 	}
 
-	private Key<R, T> makeDummyKey(T[] input, int i) {
+	private Key<R, T> makeDummyKey(T token, int i) {
 
-		R dummyRule = ruleFactory.makeDummyRule(input[i]);
+		R dummyRule = ruleFactory.makeDummyRule(token);
 		ActiveArc<R, T> dummyArc = new ActiveArc<R, T>(i, i + 1, 1, dummyRule);
-		Key<R, T> dummyKey = new Key<R, T>(dummyArc, input[i]);
+		Key<R, T> dummyKey = new Key<R, T>(dummyArc, token);
 		return dummyKey;
 	}
 }

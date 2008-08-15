@@ -20,6 +20,9 @@ NP::NP : [ART ADJ N] -> [ART ADJ N]
 	(X3::Y3)
 )
 
+; When combined with the ambiguous "can" entry,
+; tests to make sure non-rule-initial ambiguity packing
+; works
 NP::NP : [ART N] -> [ART N]
 (
 	(*score* 1.0)

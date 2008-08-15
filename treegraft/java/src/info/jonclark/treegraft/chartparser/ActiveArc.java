@@ -1,10 +1,18 @@
 package info.jonclark.treegraft.chartparser;
 
+import info.jonclark.log.LogUtils;
 import info.jonclark.treegraft.core.rules.GrammarRule;
 import info.jonclark.treegraft.core.tokens.Token;
 import info.jonclark.treegraft.core.tokens.TokenFactory;
+import info.jonclark.treegraft.core.tokens.TokenSequence;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.logging.Logger;
 
 /**
  * Represents the current state of a dotted grammar rule in the
@@ -22,20 +30,29 @@ import java.util.ArrayList;
  */
 public class ActiveArc<R extends GrammarRule<T>, T extends Token> {
 
+	private static final Logger log = LogUtils.getLogger();
+
 	/**
 	 * The initial list size for the backpointer lists. Increasing this value
 	 * will take up more memory initially, but will reduce the amount of time
 	 * spent growing the backpointer vectors if the number of backpointers
 	 * created during parsing typically exceeds this number.
 	 */
-	public static final int DEFAULT_BACKPOINTER_LIST_SIZE = 5;
+	public static final int DEFAULT_BACKPOINTER_LIST_SIZE = 1;
+	public static final int DEFAULT_RULE_LIST_SIZE = 5;
 
-	private final int startIndex;
-	private final int endIndex;
-	private final int dot;
-	private final R rule;
-	private ArrayList<Key<R, T>>[] backpointers;
-	private ActiveArc<R, T> extendedSelf = null;
+	private final int data;
+	// private final byte startIndex;
+	// private final byte endIndex;
+	// private final byte dot;
+	private HashSet<R> rules;
+	private R firstRule;
+	private ArrayList<Key<R, T>> backpointersForCurrentDot =
+			new ArrayList<Key<R, T>>(DEFAULT_BACKPOINTER_LIST_SIZE);
+	private ActiveArc<R, T>[] parentArcs;
+
+	static long totalElements = 0;
+	static long totalLists = 0;
 
 	/**
 	 * Creates a new <code>ActiveArc</code>.
@@ -48,18 +65,46 @@ public class ActiveArc<R extends GrammarRule<T>, T extends Token> {
 	 * @param dot
 	 *            The number of RHS consituents in this <code>ActiveArc</code>'s
 	 *            rule that have been covered so far.
-	 * @param rule
+	 * @param firstRule
 	 *            The <code>GrammarRule</code> that called for the creation of
 	 *            this <code>ActiveArc</code> given the current state of the
 	 *            <code>Chart</code>.
 	 */
-	@SuppressWarnings("unchecked")
-	public ActiveArc(int startIndex, int endIndex, int dot, R rule) {
-		this.startIndex = startIndex;
-		this.endIndex = endIndex;
-		this.rule = rule;
-		this.dot = dot;
-		this.backpointers = (ArrayList<Key<R, T>>[]) new ArrayList[rule.getRhs().length];
+	public ActiveArc(int startIndex, int endIndex, int dot, R firstRule) {
+
+		this(startIndex, endIndex, dot, null, null, null, null);
+		this.rules = new HashSet<R>(DEFAULT_RULE_LIST_SIZE);
+		rules.add(firstRule);
+		this.firstRule = firstRule;
+	}
+
+	public ActiveArc(int startIndex, int endIndex, int dot, R firstRule, HashSet<R> rules,
+			ActiveArc<R, T>[] prevParentArcs, ActiveArc<R, T> parentArc) {
+
+		totalLists++;
+
+		this.rules = rules;
+		this.firstRule = firstRule;
+
+		// since active arcs don't always cover the same spans,
+		// sharing backpointer lists would be a bad idea
+		// however, the *parents* of this ActiveArc
+		// that cover the same spans *before* this dot
+		// are eligible for backpointer sharing
+		if (parentArc != null) {
+			this.parentArcs = new ActiveArc[dot - 1];
+			this.parentArcs[dot - 2] = parentArc;
+			if (prevParentArcs != null) {
+				System.arraycopy(prevParentArcs, 0, this.parentArcs, 0, prevParentArcs.length);
+			}
+		}
+
+		// store all the data in a single int to save memory
+		endIndex <<= 8;
+		dot <<= 16;
+		this.data = startIndex | endIndex | dot;
+
+		// \/ WARNING: VALUES OF ENDINDEX AND DOT HAVE BEEN CHANGED AS OF NOW \/
 	}
 
 	/**
@@ -67,14 +112,15 @@ public class ActiveArc<R extends GrammarRule<T>, T extends Token> {
 	 * matches the next source-side RHS, which is needed by this
 	 * <code>ActiveArc</code> OR if such an arc has already been created, a
 	 * backpointer is simply added; thus, this is the primary method responsible
-	 * for ambiguity packing in the <code>ChartParser</code>. Typically, only
+	 * for ambiguity packing in the <code>ChartParser</code> along with the
+	 * create*Arc methods in the <code>ActiveArcManager</code>. Typically, only
 	 * <code>ActiveArcManager.extendArcs</code> should need to call this method.
 	 * 
 	 * @param key
 	 *            A <code>Key</code>, whose source LHS should match the
 	 *            source-side RHS constituent directly to the right of the dot
 	 *            for this <code>ActiveArc</code>.
-	 * @return A new <code>ActiveArc</code> with its dot moved one position to
+	 * @return a new <code>ActiveArc</code> with its dot moved one position to
 	 *         the right and with a backpointer to the given <code>Key</code>
 	 *         added.
 	 */
@@ -83,19 +129,11 @@ public class ActiveArc<R extends GrammarRule<T>, T extends Token> {
 
 		assert this.getEndIndex() == key.getStartIndex() : "Discontiguous arc extension.";
 
-		if (extendedSelf == null) {
-			extendedSelf =
-					(ActiveArc<R, T>) new ActiveArc(this.getStartIndex(), key.getEndIndex(),
-							this.getDot() + 1, this.getRule());
-			// since there is only ever one ActiveArc per rule type,
-			// we can share this backpointer array between ActiveArc instances
-			// and get big savings on time and space complexity
-			extendedSelf.backpointers = this.backpointers;
-//			System.arraycopy(this.backpointers, 0, extendedSelf.backpointers, 0,
-//					this.backpointers.length);
-		}
-		extendedSelf.addBackpointer(this.getDot(), key);
-		return extendedSelf;
+		ActiveArc<R, T> result =
+				(ActiveArc<R, T>) new ActiveArc(this.getStartIndex(), key.getEndIndex(),
+						this.getDot() + 1, firstRule, this.rules, this.parentArcs, this);
+		result.addBackpointer(this.getDot(), key);
+		return result;
 	}
 
 	/**
@@ -113,26 +151,53 @@ public class ActiveArc<R extends GrammarRule<T>, T extends Token> {
 	public void addBackpointer(int index, Key<R, T> key) {
 
 		assert index < getDot() : "Index must fall to the left of the dot for this ActiveArc: "
-				+ index + " !< " + getDot();
+				+ index + " should be less than " + getDot();
+		assert key.getStartIndex() >= this.getStartIndex()
+				&& key.getStartIndex() <= this.getEndIndex() : "Backpointer key's start index is outside the bounds of this arc";
+		assert key.getEndIndex() >= this.getStartIndex() && key.getEndIndex() <= this.getEndIndex() : "Backpointer key's end index is outside the bounds of this arc";
+		assert backpointersForCurrentDot.contains(key) == false : "arc " + this.toString()
+				+ " already contains this backpointer: " + key.toString() + " -- duplicate: "
+				+ backpointersForCurrentDot.get(backpointersForCurrentDot.indexOf(key)).toString();
 
-		if (backpointers[index] == null) {
-			backpointers[index] = new ArrayList<Key<R, T>>(DEFAULT_BACKPOINTER_LIST_SIZE);
+		backpointersForCurrentDot.add(key);
+		totalElements++;
+		if (totalElements % 1000 == 0) {
+			log.fine("Average backpointer list size: " + (double) totalElements
+					/ (double) totalLists);
 		}
-		backpointers[index].add(key);
 	}
 
 	/**
-	 * Gets an array of lists of the backpointers for this
-	 * <code>ActiveArc</code>. The array has length <code>getDot()</code> such
-	 * that the array indices correspond to the source-side RHS constituents,
-	 * which the backpointers refer to. The indices in each <code>List</code>
-	 * correspond to the order in which backpointers were added; the lengths of
-	 * the <code>List</code>s in this array will often NOT be the same.
+	 * Adds a GrammarRule to this ActiveArc; all such grammar rules must have
+	 * the same requirements according to rule.getPackingString(), but may have
+	 * unique target sides.
 	 * 
-	 * @return
+	 * @param rule
+	 *            the rule to be added
 	 */
-	public ArrayList<Key<R, T>>[] getBackpointers() {
-		return backpointers;
+	public void addRule(R rule) {
+		rules.add(rule);
+	}
+
+	/**
+	 * Gets the list of backpointers associated with a particular RHS element.
+	 * The indices in the <code>List</code> correspond to the order in which
+	 * backpointers were added; the lengths of the <code>List</code>s for
+	 * different values of sourceRhsIndex will often NOT be the same.
+	 * 
+	 * @param sourceRhsIndex
+	 *            the source-side RHS index for which the backpointer list is
+	 *            desired
+	 * @return a list of backpointers to Keys
+	 */
+	public List<Key<R, T>> getBackpointers(int sourceRhsIndex) {
+		assert sourceRhsIndex < getDot() : "sourceRhsIndex > dot for this arc";
+
+		if (sourceRhsIndex == getDot() - 1) {
+			return backpointersForCurrentDot;
+		} else {
+			return parentArcs[sourceRhsIndex].backpointersForCurrentDot;
+		}
 	}
 
 	/**
@@ -142,6 +207,7 @@ public class ActiveArc<R extends GrammarRule<T>, T extends Token> {
 	 * @return the start index
 	 */
 	public int getStartIndex() {
+		int startIndex = data & 0x000000ff;
 		return startIndex;
 	}
 
@@ -152,6 +218,8 @@ public class ActiveArc<R extends GrammarRule<T>, T extends Token> {
 	 * @return the end index
 	 */
 	public int getEndIndex() {
+		int endIndex = data & 0x0000ff00;
+		endIndex >>= 8;
 		return endIndex;
 	}
 
@@ -164,22 +232,42 @@ public class ActiveArc<R extends GrammarRule<T>, T extends Token> {
 	 *         otherwise.
 	 */
 	public T getNeededSymbol() {
-		if (getDot() >= rule.getRhs().length) {
+		if (getDot() >= getRhs().length) {
 			return null;
 		} else {
-			T needed = rule.getRhs()[getDot()];
+			T needed = getRhs()[getDot()];
 			return needed;
 		}
 	}
 
 	/**
-	 * Gets the <code>GrammarRule</code> that called for the creation of this
+	 * Gets the <code>GrammarRules</code> that called for the creation of this
 	 * <code>ActiveArc</code>.
 	 * 
-	 * @return a grammar rule
+	 * @return a list of grammar rules
 	 */
-	public R getRule() {
-		return rule;
+	public Set<R> getRules() {
+		return Collections.unmodifiableSet(rules);
+	}
+
+	/**
+	 * Gets the source-side LHS, which is shared by all rules that formed this
+	 * arc.
+	 * 
+	 * @return the source-side LHS
+	 */
+	public T getLhs() {
+		return firstRule.getLhs();
+	}
+
+	/**
+	 * Gets the source-side RHS, which is shared by all rules that formed this
+	 * arc.
+	 * 
+	 * @return the source-side RHS
+	 */
+	public T[] getRhs() {
+		return firstRule.getRhs();
 	}
 
 	/**
@@ -189,7 +277,55 @@ public class ActiveArc<R extends GrammarRule<T>, T extends Token> {
 	 * @return the dot position
 	 */
 	public int getDot() {
+		int dot = data & 0xffff0000;
+		dot >>= 16;
 		return dot;
+	}
+
+	/**
+	 * Determines if the given Key (meaning any of the rules it contains)
+	 * satisfies the rule constraints for <i>at least</i> one of the rules in
+	 * this arc.
+	 * 
+	 * @param sourceRhsIndex
+	 *            The source-side RHS index for which constraints will be
+	 *            checked.
+	 * @param key
+	 *            The proposed key that we might use to extend this are at the
+	 *            given RHS position.
+	 * @return True if the key satisfies the constraints of at least of of the
+	 *         rules in this arc; false otherwise.
+	 */
+	public boolean areConstraintsSatisfied(int sourceRhsIndex, Key<R, T> key) {
+		for (R arcRule : rules) {
+			assert Arrays.equals(getRhs(), arcRule.getRhs()) : "Incompatible RHS's detected in active arc.";
+
+			for (ActiveArc<R, T> arc : key.getActiveArcs()) {
+				for (R keyRule : arc.getRules()) {
+					if (arcRule.areConstraintsSatisfied(sourceRhsIndex, keyRule)) {
+						return true;
+					}
+				}
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Assuming that an existing arc and a candidate arc have the same start and
+	 * end points in the input sequence and both arcs have the same constituent
+	 * to the right of their dots, gets any further items that must be matched
+	 * by the candidate arc for that arc to be packed into this existing arc.
+	 * (Usually the source-side LHS concatenated with the source-side RHS).
+	 * 
+	 * @return the items that must be matched as a sequence of tokens
+	 */
+	public TokenSequence<T> getArcPackingString() {
+		return firstRule.getArcPackingString();
+	}
+
+	public T getKeyPackingString() {
+		return firstRule.getKeyPackingString();
 	}
 
 	/**
@@ -203,9 +339,9 @@ public class ActiveArc<R extends GrammarRule<T>, T extends Token> {
 	 */
 	public String toString() {
 		StringBuilder builder = new StringBuilder();
-		builder.append(rule.getLhs().getId());
+		builder.append(getLhs().getId());
 
-		T[] rhs = rule.getRhs();
+		T[] rhs = getRhs();
 		if (rhs.length > 0) {
 			builder.append(" -> ");
 		}
@@ -219,7 +355,7 @@ public class ActiveArc<R extends GrammarRule<T>, T extends Token> {
 		if (rhs.length == getDot()) {
 			builder.append("* ");
 		}
-		return "[" + builder.toString() + "] (" + startIndex + "," + endIndex + ")";
+		return "[" + builder.toString() + "] (" + getStartIndex() + "," + getEndIndex() + ")";
 	}
 
 	/**
@@ -233,9 +369,9 @@ public class ActiveArc<R extends GrammarRule<T>, T extends Token> {
 	 */
 	public String toString(TokenFactory<T> symbolFactory) {
 		StringBuilder builder = new StringBuilder();
-		builder.append(symbolFactory.getTokenAsString(rule.getLhs()));
+		builder.append(symbolFactory.getTokenAsString(getLhs()));
 
-		T[] rhs = rule.getRhs();
+		T[] rhs = getRhs();
 		if (rhs.length > 0) {
 			builder.append(" -> ");
 		}
@@ -249,6 +385,6 @@ public class ActiveArc<R extends GrammarRule<T>, T extends Token> {
 		if (rhs.length == getDot()) {
 			builder.append("* ");
 		}
-		return "[" + builder.toString() + "] (" + startIndex + "," + endIndex + ")";
+		return "[" + builder.toString() + "] (" + getStartIndex() + "," + getEndIndex() + ")";
 	}
 }

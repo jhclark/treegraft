@@ -1,10 +1,12 @@
 package info.jonclark.treegraft.core.synccfg;
 
 import info.jonclark.stat.SecondTimer;
-import info.jonclark.treegraft.chartparser.Key;
+import info.jonclark.treegraft.core.monocfg.MonoCFGRule;
 import info.jonclark.treegraft.core.rules.GrammarRule;
 import info.jonclark.treegraft.core.rules.RuleException;
 import info.jonclark.treegraft.core.tokens.Token;
+import info.jonclark.treegraft.core.tokens.TokenFactory;
+import info.jonclark.treegraft.core.tokens.TokenSequence;
 import info.jonclark.treegraft.unification.Constraint;
 import info.jonclark.treegraft.util.ProbUtils;
 import info.jonclark.util.StringUtils;
@@ -26,6 +28,10 @@ public class SyncCFGRule<T extends Token> implements GrammarRule<T> {
 	private final T[] rhs;
 	private final T targetLhs;
 	private final T[] targetRhs;
+
+	private int keysCreated = 0;
+
+	private final TokenSequence<T> packingString;
 
 	private final int[] sourceToTargetAlignment;
 	private final int[] targetToSourceAlignment;
@@ -59,7 +65,7 @@ public class SyncCFGRule<T extends Token> implements GrammarRule<T> {
 	 */
 	public SyncCFGRule(T lhs, T[] rhs, T targetLhs, T[] targetRhs, String ruleId,
 			int[] targetToSourceAlignment, double prob, Constraint[] constraints, File file,
-			int lineNumber) throws RuleException {
+			int lineNumber, TokenFactory<T> tokenFactory) throws RuleException {
 
 		this.lhs = lhs;
 		this.rhs = rhs;
@@ -69,6 +75,9 @@ public class SyncCFGRule<T extends Token> implements GrammarRule<T> {
 		this.targetToSourceAlignment = targetToSourceAlignment;
 		this.logProb = ProbUtils.logProb(prob);
 
+		this.packingString = MonoCFGRule.makePackingString(lhs, rhs, tokenFactory);
+
+		// invert the alignments
 		this.sourceToTargetAlignment = new int[rhs.length];
 		for (int i = 0; i < sourceToTargetAlignment.length; i++) {
 			sourceToTargetAlignment[i] = -1;
@@ -251,23 +260,45 @@ public class SyncCFGRule<T extends Token> implements GrammarRule<T> {
 	 *            the source-side RHS rule index that is about to be extended in
 	 *            an <code>ActiveArc</code>
 	 * @param key
-	 *            the proposed key to extend that arc
+	 *            a rule from the proposed key to extend that arc
 	 */
-	@Override
 	public <R extends GrammarRule<T>> boolean areConstraintsSatisfied(int sourceRhsIndex,
-			Key<R, T> key) {
+			R ruleFromKey) {
 
-		SyncCFGRule<T> rule = (SyncCFGRule<T>) key.getRule();
-		int targetRhsIndex = sourceToTargetAlignment[sourceRhsIndex];
+		SyncCFGRule<T> syncRuleFromKey = (SyncCFGRule<T>) ruleFromKey;
+		if (rhs[sourceRhsIndex].isTerminal()) {
+			// terminals are always okay
+			return true;
+		} else {
+			int targetRhsIndex = sourceToTargetAlignment[sourceRhsIndex];
 
-		T requiredNonterminal = targetRhs[targetRhsIndex];
-		T actualNonterminal = rule.targetLhs;
+			T requiredNonterminal = targetRhs[targetRhsIndex];
+			T actualNonterminal = syncRuleFromKey.targetLhs;
 
-		// for a synchronous CFG rule, we have to make sure the target
-		// non-terminal symbols match
-		return requiredNonterminal.equals(actualNonterminal);
+			// for a synchronous CFG rule, we have to make sure the target
+			// non-terminal symbols match
+			return requiredNonterminal.equals(actualNonterminal);
+		}
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	public TokenSequence<T> getArcPackingString() {
+		return packingString;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	public T getKeyPackingString() {
+		return lhs;
 	}
 	
+	public void incrementKeysCreated() {
+		keysCreated++;
+	}
+
 	/**
 	 * {@inheritDoc}
 	 */
@@ -275,13 +306,18 @@ public class SyncCFGRule<T extends Token> implements GrammarRule<T> {
 		// each rule has a unique instance
 		return (this == other);
 	}
-	
+
+	private int hash = -1;
+
 	/**
 	 * {@inheritDoc}
 	 */
 	public int hashCode() {
-		// hash based on our reference
-		return super.hashCode();
+		if (hash == -1) {
+			// hash based on our reference
+			hash = super.hashCode();
+		}
+		return hash;
 	}
 
 	/**
@@ -295,5 +331,9 @@ public class SyncCFGRule<T extends Token> implements GrammarRule<T> {
 				// "@" + file.getName() + ":" + lineNumber +
 				" = " + lhs + "::" + targetLhs + " : [ " + StringUtils.untokenize(rhs) + " ] -> [ "
 				+ StringUtils.untokenize(targetRhs) + " ]";
+	}
+
+	public int getKeysCreated() {
+		return keysCreated;
 	}
 }

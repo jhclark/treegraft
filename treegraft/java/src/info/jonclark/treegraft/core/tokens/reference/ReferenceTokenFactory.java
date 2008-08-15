@@ -1,6 +1,7 @@
 package info.jonclark.treegraft.core.tokens.reference;
 
 import info.jonclark.treegraft.core.tokens.TokenFactory;
+import info.jonclark.treegraft.core.tokens.TokenSequence;
 
 import java.util.HashMap;
 
@@ -49,6 +50,14 @@ public class ReferenceTokenFactory extends TokenFactory<ReferenceToken> {
 		}
 		return tok;
 	}
+	
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public TokenSequence<ReferenceToken> makeTokenSequence(ReferenceToken[] tokens) {
+		return new ReferenceTokenSequence(tokens);
+	}
 
 	/**
 	 * {@inheritDoc}
@@ -67,5 +76,4 @@ public class ReferenceTokenFactory extends TokenFactory<ReferenceToken> {
 	public ReferenceToken[] newTokenArray(int length) {
 		return new ReferenceToken[length];
 	}
-
 }

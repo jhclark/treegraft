@@ -40,11 +40,13 @@ public abstract class ParseFormatter<R extends GrammarRule<T>, T extends Token> 
 	 * 
 	 * @param key
 	 *            The key whose children are about to be unpacked
+	 * @param rule
+	 *            The rule whose children are about to be unpacked
 	 * @param score
 	 *            The current score at this node
 	 * @return a string to be appended to the parse being built
 	 */
-	public abstract String formatNonterminalBefore(Key<R, T> key, double score);
+	public abstract String formatNonterminalBefore(Key<R, T> key, R rule, double score);
 
 	/**
 	 * Produces a string that should come after the children of the specified
@@ -52,11 +54,13 @@ public abstract class ParseFormatter<R extends GrammarRule<T>, T extends Token> 
 	 * 
 	 * @param key
 	 *            The key whose children have just been unpacked
+	 * @param rule
+	 *            The rule whose children are about to be unpacked
 	 * @param score
 	 *            The current score at this node
 	 * @return a string to be appended to the parse being built
 	 */
-	public abstract String formatNonterminalAfter(Key<R, T> key, double score);
+	public abstract String formatNonterminalAfter(Key<R, T> key, R rule, double score);
 
 	/**
 	 * Produces a string that represents the given terminal token (which is
@@ -75,27 +79,33 @@ public abstract class ParseFormatter<R extends GrammarRule<T>, T extends Token> 
 	 * 
 	 * @param key
 	 *            the key for which RHS alignments are desired
+	 * @param rule
+	 *            the rule for which RHS alignments are desired
 	 * @return an array with alignment information as defined in
 	 *         <code>SyncCFGRule.getAlignment()</code>
 	 */
-	public abstract int[] getTargetToSourceRhsAlignment(Key<R, T> key);
+	public abstract int[] getTargetToSourceRhsAlignment(Key<R, T> key, R rule);
 
 	/**
-	 * Given a key (which is associated with a GrammarRule), transduce its RHS
-	 * to some array of terminals and non-terminals. In the case of a
-	 * monolingual parse, this can simply be the original source RHS.
+	 * Given a key and a specific <code>GrammarRule</code>, transduce its RHS to
+	 * some array of terminals and non-terminals. In the case of a monolingual
+	 * parse, this can simply be the original source RHS.
 	 * 
 	 * @param key
-	 * @return
+	 *            the key for which a transduced RHS is desired
+	 * @param rule
+	 *            the rule for which a transduced RHS is desired
+	 * @return the transduced RHS
 	 */
-	public abstract T[] transduce(Key<R, T> key);
-	
+	public abstract T[] transduce(Key<R, T> key, R rule);
+
 	/**
-	 * Gets the <code>ParseScorer</code> to be used in scoring the outputted parses.
+	 * Gets the <code>ParseScorer</code> to be used in scoring the outputted
+	 * parses.
 	 * 
 	 * @return the <code>ParseScorer</code> passed to the constructor
 	 */
-	public abstract ParseScorer<R,T> getScorer();
+	public abstract ParseScorer<R, T> getScorer();
 
 	/**
 	 * Gets an array in which the nth element has value n, which is useful in

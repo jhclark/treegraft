@@ -101,21 +101,21 @@ public class Grammar<R extends GrammarRule<T>, T extends Token> {
 
 		boolean good = true;
 
-//		if (rule.getLhs().toString().equals("___PUNCT___")
-//				|| rule.getLhs().toString().equals("___TRUNC___")) {
-//			log.warning("FILTERING RULE: " + rule);
-//			good = false;
-//		}
-//
-//		if (good) {
-//			for (T rhs : rule.getRhs()) {
-//				if (rhs.toString().equals("___S___") || rhs.toString().equals("___CNP___")) {
-//					log.warning("FILTERING RULE: " + rule);
-//					good = false;
-//					break;
-//				}
-//			}
-//		}
+		if (rule.getLhs().toString().equals("___PUNCT___")
+				|| rule.getLhs().toString().equals("___TRUNC___")) {
+			log.warning("FILTERING RULE: " + rule);
+			good = false;
+		}
+
+		if (good) {
+			for (T rhs : rule.getRhs()) {
+				if (rhs.toString().equals("___S___") || rhs.toString().equals("___CNP___")) {
+					log.warning("FILTERING RULE: " + rule);
+					good = false;
+					break;
+				}
+			}
+		}
 
 		if (good) {
 			for (T token : rule.getRhs()) {
@@ -164,9 +164,18 @@ public class Grammar<R extends GrammarRule<T>, T extends Token> {
 		}
 
 		nCandidates++;
-		int nRules = getAllRules().size();
 		if (nCandidates % 100000 == 0)
-			log.info("Read " + nCandidates + " so far and kept " + nRules + "...");
+			log.info("Read " + nCandidates + " so far and kept " + getAllRules().size() + "...");
+	}
+
+	/**
+	 * Gets the number of rules that were added to this <code>Grammar</code>
+	 * before the internal filtering was applied.
+	 * 
+	 * @return
+	 */
+	public int getCandidateCount() {
+		return nCandidates;
 	}
 
 	/**
@@ -211,13 +220,27 @@ public class Grammar<R extends GrammarRule<T>, T extends Token> {
 	}
 
 	/**
-	 * Gets the top n rules with the regard to the number of seconds that rule
-	 * has taken the system to evaluate so far.
+	 * Gets the top n rules with the regard to the number of keys that were
+	 * directly or indirectly created due to the rule.
 	 * 
 	 * @param n
 	 *            the number of rules to be returned
-	 * @return a list of the slowest rules in this grammar
+	 * @return a list of the most productive rules in the grammar
 	 */
+	public ArrayList<R> getNMostProductiveRules(int n) {
+		Collections.sort(allRules, new Comparator<R>() {
+			public int compare(R a, R b) {
+				return (b.getKeysCreated() - a.getKeysCreated());
+			}
+		});
+
+		ArrayList<R> list = new ArrayList<R>(n);
+		for (int i = 0; i < n && i < allRules.size(); i++) {
+			list.add(allRules.get(i));
+		}
+		return list;
+	}
+
 	public ArrayList<R> getNSlowestRules(int n) {
 		Collections.sort(allRules, new Comparator<R>() {
 			public int compare(R a, R b) {

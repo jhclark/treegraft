@@ -55,7 +55,7 @@ public class Parse<R extends GrammarRule<T>, T extends Token> {
 	}
 	
 
-	public double getCurrentLogProb() {
+	public double getLogProb() {
 		return currentScore;
 	}
 
@@ -63,12 +63,16 @@ public class Parse<R extends GrammarRule<T>, T extends Token> {
 		this.currentScore = currentScore;
 	}
 	
-	public void prependToParse(String str) {
+	public void prepend(String str) {
 		lispTree.prepend(str);
 	}
 	
-	public void appendToParse(String str) {
+	public void append(String str) {
 		lispTree.append(str);
+	}
+	
+	public void append(Parse<R,T> parse) {
+		lispTree.append(parse.lispTree.toString());
 	}
 
 	/**

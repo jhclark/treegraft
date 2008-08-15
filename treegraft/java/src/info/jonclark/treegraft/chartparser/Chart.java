@@ -41,8 +41,13 @@ public class Chart<R extends GrammarRule<T>, T extends Token> {
 
 	private final HashMap<Key<R, T>, KeyGroup> chart =
 			new HashMap<Key<R, T>, KeyGroup>(DEFAULT_CHART_SIZE);
+	private final HashMap<T, Key<R, T>>[][] existingKeys;
 	private final ArrayList<Key<R, T>> parses = new ArrayList<Key<R, T>>();
 	private final ArrayList<Key<R, T>> keys = new ArrayList<Key<R, T>>(DEFAULT_CHART_SIZE);
+
+	public Chart(int inputSize) {
+		existingKeys = new HashMap[inputSize + 1][inputSize + 1];
+	}
 
 	/**
 	 * Adds a <code>Key</code> to this <code>Chart</code> after it has been
@@ -62,14 +67,19 @@ public class Chart<R extends GrammarRule<T>, T extends Token> {
 		keys.add(key);
 	}
 
-	private void append(Map<Key<R, T>, KeyGroup> map, Key<R, T> key, Key<R, T> valueToAppend) {
+	private void append(Map<Key<R, T>, KeyGroup> chart, Key<R, T> key, Key<R, T> valueToAppend) {
 
-		KeyGroup packedKey = map.get(key);
+		KeyGroup packedKey = chart.get(key);
 		if (packedKey == null) {
 			packedKey = new KeyGroup();
-			map.put(key, packedKey);
+			chart.put(key, packedKey);
 		}
 		packedKey.list.add(valueToAppend);
+
+		if (existingKeys[key.getStartIndex()][key.getEndIndex()] == null) {
+			existingKeys[key.getStartIndex()][key.getEndIndex()] = new HashMap<T, Key<R, T>>();
+		}
+		existingKeys[key.getStartIndex()][key.getEndIndex()].put(key.getKeyPackingString(), key);
 	}
 
 	/**
@@ -103,6 +113,21 @@ public class Chart<R extends GrammarRule<T>, T extends Token> {
 	 */
 	public List<Key<R, T>> getKeys() {
 		return keys;
+	}
+
+	protected Key<R, T> getKeyForPacking(ActiveArc<R, T> completedArc) {
+		HashMap<T, Key<R, T>> map =
+				existingKeys[completedArc.getStartIndex()][completedArc.getEndIndex()];
+		if (map == null) {
+			return null;
+		} else {
+			Key<R, T> existingKey = map.get(completedArc.getKeyPackingString());
+			return existingKey;
+		}
+	}
+
+	public boolean contains(Key<R, T> key) {
+		return keys.contains(key);
 	}
 
 	/**
@@ -143,7 +168,7 @@ public class Chart<R extends GrammarRule<T>, T extends Token> {
 
 		for (Key<R, T> key : keys) {
 			if (key.isTerminal()) {
-//				formatter.addTerminal(key);
+				// formatter.addTerminal(key);
 			} else {
 				formatter.addNonterminal(key);
 			}

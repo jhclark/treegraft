@@ -24,9 +24,9 @@ import info.jonclark.util.FileUtils;
 import info.jonclark.util.StringUtils;
 
 import java.io.File;
-import java.io.IOException;
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.junit.Test;
@@ -68,8 +68,7 @@ public class ChartParserTest {
 				new ChartParser<MonoCFGRule<StringToken>, StringToken>(ruleFactory, grammar);
 
 		Chart<MonoCFGRule<StringToken>, StringToken> c =
-				new Chart<MonoCFGRule<StringToken>, StringToken>();
-		parser.parse(tokenFactory.makeTerminalTokens(StringUtils.tokenize("dogs bark")), c);
+				parser.parse(tokenFactory.makeTerminalTokens(StringUtils.tokenize("dogs bark")));
 
 		MonoParseFormatter<StringToken> formatter =
 				new MonoParseFormatter<StringToken>(tokenFactory);
@@ -113,8 +112,7 @@ public class ChartParserTest {
 
 			// parse the input
 			Chart<MonoCFGRule<StringToken>, StringToken> c =
-					new Chart<MonoCFGRule<StringToken>, StringToken>();
-			parser.parse(tokenFactory.makeTerminalTokens(StringUtils.tokenize(input)), c);
+					parser.parse(tokenFactory.makeTerminalTokens(StringUtils.tokenize(input)));
 
 			MonoParseFormatter<StringToken> formatter =
 					new MonoParseFormatter<StringToken>(tokenFactory);
@@ -164,16 +162,21 @@ public class ChartParserTest {
 				i++;
 
 				ArrayList<String> expectedKeys = new ArrayList<String>();
-				while (lines[i].equals("<TEST>") == false) {
-					expectedKeys.add(lines[i]);
+				while (lines[i].equals("<TEST>") == false && lines[i].equals("</TESTS>") == false) {
+					if (lines[i].startsWith(";") == false) {
+						expectedKeys.add(lines[i]);
+					}
 					i++;
 				}
+				Collections.reverse(expectedKeys);
 
 				// backup and read the <TEST> at the next outer iteration
 				i--;
 
 				testSyncInput(input, expectedKeys, parser, tokenFactory);
-			} // end if line.equals("<TEST>")
+			} else if (lines[i].equals("</TESTS>")) {
+				break;
+			}
 		} // end for each input
 	}
 
@@ -195,8 +198,8 @@ public class ChartParserTest {
 		System.out.println("Testing input: " + input);
 
 		// parse the input
-		Chart<SyncCFGRule<T>, T> c = new Chart<SyncCFGRule<T>, T>();
-		parser.parse(tokenFactory.makeTerminalTokens(StringUtils.tokenize(input)), c);
+		Chart<SyncCFGRule<T>, T> c =
+				parser.parse(tokenFactory.makeTerminalTokens(StringUtils.tokenize(input)));
 
 		showSyncParses(tokenFactory, c);
 
@@ -226,11 +229,13 @@ public class ChartParserTest {
 
 			String expectedSourceKey = StringUtils.substringBefore(expectedKey, " -> ");
 			expectedSourceKey = StringUtils.substringBetweenMatching(expectedSourceKey, "(", ")");
-			String expectedTargetKey = StringUtils.substringAfter(expectedKey, " -> ");
+			String strExpectedTargetKeys = StringUtils.substringAfter(expectedKey, " -> ");
+			String[] expectedTargetKeys = StringUtils.tokenize(strExpectedTargetKeys, ";");
+			StringUtils.trimTokens(expectedTargetKeys);
 
 			List<Key<SyncCFGRule<T>, T>> matchingSourceKeys =
 					checkSourceKey(keys, expectedSourceKey);
-			checkTargetKey(matchingSourceKeys, expectedTargetKey, tokenFactory);
+			checkTargetKey(matchingSourceKeys, expectedTargetKeys, tokenFactory);
 		}
 
 		assertTrue("Got " + keys.size() + " keys instead of the expected " + expectedKeys.size()
@@ -238,42 +243,44 @@ public class ChartParserTest {
 	}
 
 	private <T extends Token> void checkTargetKey(List<Key<SyncCFGRule<T>, T>> matchingSourceKeys,
-			String expectedTargetKey, TokenFactory<T> tokenFactory) throws ParseException {
+			String[] expectedTargetKeys, TokenFactory<T> tokenFactory) throws ParseException {
 
 		ParseScorer<SyncCFGRule<T>, T> scorer = new BasicScorer<SyncCFGRule<T>, T>();
 		SyncParseFormatter<T> formatter =
 				new SyncParseFormatter<T>(tokenFactory, OutputType.TARGET_TREE, scorer, true);
 
-		System.out.println("Checking for target parse: " + expectedTargetKey);
+		for (String expectedTargetKey : expectedTargetKeys) {
+			System.out.println("Checking for target parse: " + expectedTargetKey);
 
-		boolean found = false;
-		for (Key<SyncCFGRule<T>, T> matchingSourceKey : matchingSourceKeys) {
+			boolean found = false;
+			for (Key<SyncCFGRule<T>, T> matchingSourceKey : matchingSourceKeys) {
 
-			List<Parse<SyncCFGRule<T>, T>> partialParses =
-					matchingSourceKey.getPartialParses(formatter);
+				List<Parse<SyncCFGRule<T>, T>> partialParses =
+						matchingSourceKey.getPartialParses(formatter);
 
-			// show actual partial parses
-			// for (Parse<SyncCFGRule<T>, T> parse : partialParses) {
-			// System.out.println("Actual partial parse: " + parse.toString());
-			// }
+				// show actual partial parses
+				// for (Parse<SyncCFGRule<T>, T> parse : partialParses) {
+				// System.out.println("Actual partial parse: " +
+				// parse.toString());
+				// }
 
-			// do inefficient search over all parses
-			expectedTargetKey = expectedTargetKey.trim();
+				// do inefficient search over all parses
+				expectedTargetKey = expectedTargetKey.trim();
 
-			for (Parse<SyncCFGRule<T>, T> parse : partialParses) {
-				if (expectedTargetKey.equals(parse.toString())) {
-					found = true;
-					break;
+				for (Parse<SyncCFGRule<T>, T> parse : partialParses) {
+					if (expectedTargetKey.equals(parse.toString())) {
+						found = true;
+						assertTrue("Got " + partialParses.size()
+								+ " partial parses instead of the expected "
+								+ expectedTargetKeys.length + " for: " + expectedTargetKey,
+								partialParses.size() == expectedTargetKeys.length);
+						break;
+					}
 				}
 			}
+			assertTrue("For key " + matchingSourceKeys.get(0) + " -- expected parse not found: "
+					+ expectedTargetKey, found);
 		}
-		assertTrue("For key " + matchingSourceKeys.get(0) + " -- expected parse not found: "
-				+ expectedTargetKey, found);
-
-		// assertTrue("Got " + partialParses.length +
-		// " partial parses instead of the expected "
-		// + expectedTargetKeys.length, partialParses.length ==
-		// expectedTargetKeys.length);
 	}
 
 	/**
@@ -365,9 +372,7 @@ public class ChartParserTest {
 				new ChartParser<SyncCFGRule<StringToken>, StringToken>(ruleFactory, grammar);
 
 		Chart<SyncCFGRule<StringToken>, StringToken> chart =
-				new Chart<SyncCFGRule<StringToken>, StringToken>();
-
-		parser.parse(tokenFactory.makeTerminalTokens(StringUtils.tokenize("the dogs bark")), chart);
+				parser.parse(tokenFactory.makeTerminalTokens(StringUtils.tokenize("the dogs bark")));
 
 		ParseScorer<SyncCFGRule<StringToken>, StringToken> scorer =
 				new BasicScorer<SyncCFGRule<StringToken>, StringToken>();

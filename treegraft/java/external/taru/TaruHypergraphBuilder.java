@@ -2,6 +2,7 @@ package taru;
 
 import hyperGraph.HGVertex;
 import hyperGraph.HyperGraph;
+import info.jonclark.treegraft.chartparser.ActiveArc;
 import info.jonclark.treegraft.chartparser.Key;
 import info.jonclark.treegraft.core.formatting.forest.ParseForestFormatter;
 import info.jonclark.treegraft.core.synccfg.SyncCFGRule;
@@ -10,6 +11,7 @@ import info.jonclark.treegraft.core.tokens.TokenFactory;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 import taruDecoder.Hypothesis;
 
@@ -46,48 +48,57 @@ public class TaruHypergraphBuilder<R extends SyncCFGRule<T>, T extends Token> ex
 	@Override
 	public void addNonterminal(Key<R, T> key) {
 
-		System.out.println("ADDING NONTERMINAL: " + key);
-
-		String nonterminalType = tokenFactory.getTokenAsString(key.getRule().getLhs());
+		String nonterminalType = tokenFactory.getTokenAsString(key.getLhs());
 		HGVertex nonterminalVertex =
 				new HGVertex(key.getStartIndex(), key.getEndIndex(), nonterminalType);
 		int nonterminalId = graph.addVertex(nonterminalVertex);
 		nonterminalIds.put(key, nonterminalId);
 
-		// create edge
-		ArrayList<Key<R, T>>[] backpointers = key.getActiveArc().getBackpointers();
+		for (ActiveArc<R, T> arc : key.getActiveArcs()) {
 
-		// check for any terminals coming off of this key
-		for (T token : key.getRule().getTargetRhs()) {
-			if (token.isTerminal()) {
+			// create edge
+			List<Key<R, T>>[] backpointers = new List[arc.getRhs().length];
+			for (int i = 0; i < backpointers.length; i++) {
+				backpointers[i] = arc.getBackpointers(i);
+			}
 
-				String words = tokenFactory.getTokenAsString(token);
-				System.out.println("ADDING TERMINAL: " + words);
+			// TODO: Check rule-by-rule to make sure the target RHS works out
+			// okay
 
-				HGVertex terminalVertex =
-						new HGVertex(INSERTION_START, INSERTION_END, TERMINAL_TYPE);
-				int terminalId = graph.addVertex(terminalVertex);
-				terminalIds.put(token, terminalId);
+			for (R rule : arc.getRules()) {
+				// check for any terminals coming off of this key
+				for (T token : rule.getTargetRhs()) {
+					if (token.isTerminal()) {
 
-				Hypothesis hypothesis = new Hypothesis(words, DEFAULT_EDGE_INDEX, DEFAULT_KINDEX);
-				terminalVertex.addHypothesis(hypothesis);
+						String words = tokenFactory.getTokenAsString(token);
+
+						HGVertex terminalVertex =
+								new HGVertex(INSERTION_START, INSERTION_END, TERMINAL_TYPE);
+						int terminalId = graph.addVertex(terminalVertex);
+						terminalIds.put(token, terminalId);
+
+						Hypothesis hypothesis =
+								new Hypothesis(words, DEFAULT_EDGE_INDEX, DEFAULT_KINDEX);
+						terminalVertex.addHypothesis(hypothesis);
+					}
+				}
+
+				// prepare to turn edges into hyperedges
+				String ruleId = rule.getRuleId();
+				T[] targetRhs = rule.getTargetRhs();
+				int[] items = new int[targetRhs.length];
+
+				int[] alignment = rule.getTargetToSourceAlignment();
+				assert alignment.length == targetRhs.length : "length mismatch";
+
+				permuteEdgesIntoHyperedges(key, items, alignment, targetRhs, backpointers, ruleId,
+						nonterminalId, 0);
 			}
 		}
-
-		// prepare to turn edges into hyperedges
-		String ruleId = key.getRule().getRuleId();
-		T[] targetRhs = key.getRule().getTargetRhs();
-		int[] items = new int[targetRhs.length];
-
-		int[] alignment = key.getRule().getTargetToSourceAlignment();
-		assert alignment.length == targetRhs.length : "length mismatch";
-
-		permuteEdgesIntoHyperedges(key, items, alignment, targetRhs, backpointers, ruleId,
-				nonterminalId, 0);
 	}
 
 	private void permuteEdgesIntoHyperedges(Key<R, T> parent, int[] items, int[] alignment,
-			T[] targetRhs, ArrayList<Key<R, T>>[] backpointers, String ruleId, int goal,
+			T[] targetRhs, List<Key<R, T>>[] backpointers, String ruleId, int goal,
 			int targetPosition) {
 
 		if (alignment[targetPosition] == -1) {
@@ -100,14 +111,14 @@ public class TaruHypergraphBuilder<R extends SyncCFGRule<T>, T extends Token> ex
 		} else {
 
 			int sourcePosition = alignment[targetPosition];
-			
+
 			for (Key<R, T> sourceKey : backpointers[sourcePosition]) {
 
 				Integer nonterminalId = nonterminalIds.get(sourceKey);
 				if (nonterminalId == null) {
 					throw new RuntimeException(
-							"Child backpointer has not yet been assigned an ID: " + sourceKey.toString()
-									+ " -- for parent: " + parent.toString());
+							"Child backpointer has not yet been assigned an ID: "
+									+ sourceKey.toString() + " -- for parent: " + parent.toString());
 				} else {
 					items[targetPosition] = nonterminalId;
 

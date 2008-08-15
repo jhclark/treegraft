@@ -1,6 +1,7 @@
 package info.jonclark.treegraft.core.tokens.string;
 
 import info.jonclark.treegraft.core.tokens.TokenFactory;
+import info.jonclark.treegraft.core.tokens.TokenSequence;
 
 import java.util.HashMap;
 
@@ -44,6 +45,14 @@ public class StringTokenFactory extends TokenFactory<StringToken> {
 			str2tok.put(key, tok);
 		}
 		return tok;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public TokenSequence<StringToken> makeTokenSequence(StringToken[] tokens) {
+		return new StringTokenSequence(tokens);
 	}
 
 	/**

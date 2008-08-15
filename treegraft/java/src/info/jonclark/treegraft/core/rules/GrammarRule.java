@@ -1,8 +1,8 @@
 package info.jonclark.treegraft.core.rules;
 
-import info.jonclark.treegraft.chartparser.Key;
 import info.jonclark.treegraft.core.synccfg.SyncCFGRule;
 import info.jonclark.treegraft.core.tokens.Token;
+import info.jonclark.treegraft.core.tokens.TokenSequence;
 
 /**
  * A basic grammar rule for a monolingual or transduction parser. Other data can
@@ -109,12 +109,31 @@ public interface GrammarRule<T extends Token> {
 	 * @param sourceRhsIndex
 	 *            the source-side RHS rule index that is about to be extended in
 	 *            an <code>ActiveArc</code>
-	 * @param key
-	 *            the proposed key to extend that arc
+	 * @param childRule
+	 *            a proposed child rule whose LHS will be applied to the RHS of
+	 *            this parent <code>GrammarRule</code>
 	 * @return true if the proposed key is legal according to this rule; false
 	 *         otherwise.
 	 * @see SyncCFGRule
 	 */
 	public <R extends GrammarRule<T>> boolean areConstraintsSatisfied(int sourceRhsIndex,
-			Key<R, T> key);
+			R childRule);
+
+	/**
+	 * Assuming that an existing arc and a candidate arc have the same start and
+	 * end points in the input sequence and both arcs have the same constituent
+	 * to the right of their dots, then this methodgets any further items that
+	 * must be matched by the candidate arc for that arc to be packed into an
+	 * existing arc. (Usually the source-side LHS concatenated with the
+	 * source-side RHS).
+	 * 
+	 * @return the items that must be matched as a sequence of tokens
+	 */
+	public TokenSequence<T> getArcPackingString();
+
+	public T getKeyPackingString();
+	
+	public void incrementKeysCreated();
+	
+	public int getKeysCreated();
 }

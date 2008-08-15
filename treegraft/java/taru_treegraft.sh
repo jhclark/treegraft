@@ -1,1 +1,1 @@
-java -cp lib/junit-4.4.jar:lib/JonClarkDotInfo.jar:../Taru/bin:bin -ea -Xmx2000M taru.TaruTreeGraftDriver
+java -cp lib/junit-4.4.jar:lib/JonClarkDotInfo.jar:../Taru/bin:bin -ea -Xmx2000M taru.TaruTreeGraftDriver data/taru_treegraft.properties

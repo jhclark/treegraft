@@ -3,6 +3,8 @@ package taru;
 import hyperGraph.HGUtils;
 import hyperGraph.HyperGraph;
 import info.jonclark.log.LogUtils;
+import info.jonclark.properties.SmartProperties;
+import info.jonclark.stat.ProfilerTimer;
 import info.jonclark.treegraft.chartparser.Chart;
 import info.jonclark.treegraft.chartparser.ChartParser;
 import info.jonclark.treegraft.core.grammar.Grammar;
@@ -28,30 +30,20 @@ public class TaruTreeGraftDriver {
 
 	public static void main(String[] args) throws Exception {
 
-		if (args.length != 0) {
-			System.err.println("Usage: program <arg>");
+		if (args.length != 1) {
+			System.err.println("Usage: program <props_file>");
 			System.exit(1);
 		}
 
-		Scorer.modelFile = "data/de-en/taru.model";
-		LMFeatureFunction.lmFile = "data/de-en/wmt08-en.lm.bin";
-		LMFeatureFunction.loadLM();
-
-		LogUtils.logAll();
+		SmartProperties props = new SmartProperties(args[0]);
+		File grammarFile = props.getPropertyFile("paths.grammarFile");
+		String input = props.getPropertyString("input");
+		Scorer.modelFile = props.getPropertyString("scorer.modelFile");
+		LMFeatureFunction.lmFile = props.getPropertyString("lm.modelFile");
 
 		TokenFactory<StringToken> tokenFactory = new StringTokenFactory();
 		SyncCFGRuleFactory<StringToken> ruleFactory =
 				new SyncCFGRuleFactory<StringToken>(tokenFactory);
-
-		String input =
-				"ie meine Rede so wohlwollend aufgenommen haben , und richte meinen Dank auch an diejenigen ,"
-						+ " die mir liebenswürdig erweise vorgeworfen haben , dass ich diese Rede nicht schon früher gehalten hätte . ";
-
-		// String input =
-		// "Le domaine des services publics de base d' intérêt social , culturel et caritatif doivent être repris dans l' article"
-		// +
-		// " 87 afin que ces institutions importantes puissent bénéficier d' une protection durable ."
-		// ;
 
 		StringToken[] inputTokens = tokenFactory.makeTerminalTokens(StringUtils.tokenize(input));
 
@@ -60,20 +52,22 @@ public class TaruTreeGraftDriver {
 
 		log.info("Loading grammar...");
 		Grammar<SyncCFGRule<StringToken>, StringToken> grammar =
-				SyncCFGGrammarLoader.loadSyncGrammar(new File("data/de-en/de-en.all"),
-						tokenFactory, vocabulary);
+				SyncCFGGrammarLoader.loadSyncGrammar(grammarFile, tokenFactory, vocabulary);
 
 		log.info("Parsing...");
-		ChartParser<SyncCFGRule<StringToken>, StringToken> parse =
-				new ChartParser<SyncCFGRule<StringToken>, StringToken>(ruleFactory, grammar);
-		Chart<SyncCFGRule<StringToken>, StringToken> chart =
-				new Chart<SyncCFGRule<StringToken>, StringToken>();
-		parse.parse(inputTokens, chart);
+		ProfilerTimer timer = ProfilerTimer.newTimer("Taru-Treegraft", null, true, true);
+		ChartParser<SyncCFGRule<StringToken>, StringToken> parser =
+				new ChartParser<SyncCFGRule<StringToken>, StringToken>(ruleFactory, grammar, timer);
+		Chart<SyncCFGRule<StringToken>, StringToken> chart = parser.parse(inputTokens);
+		timer.pause();
+		System.out.println(timer.getTimingReport(true));
 
 		log.info("Creating target hypergraph...");
 		TaruHypergraphBuilder<SyncCFGRule<StringToken>, StringToken> graphBuilder =
 				new TaruHypergraphBuilder<SyncCFGRule<StringToken>, StringToken>(tokenFactory);
 		HyperGraph targetHG = chart.getParseForest(graphBuilder);
+
+		LMFeatureFunction.loadLM();
 
 		log.info("Binarizing hypergraph...");
 		HyperGraph binHG = HGUtils.binarizeHG(targetHG);

@@ -5,9 +5,12 @@ import info.jonclark.treegraft.core.tokens.Token;
 
 public class BasicScorer<R extends GrammarRule<T>, T extends Token> implements ParseScorer<R, T> {
 
-	@Override
-	public double accumulate(double currentLogProb, R ruleToAppend) {
+	public double combineRuleScoreWithChildren(double currentLogProb, R ruleToAppend) {
 		return currentLogProb + ruleToAppend.getLogProb();
+	}
+
+	public double combineChildScores(double accumulatedLogProb, double newChildScore) {
+		return accumulatedLogProb + newChildScore;
 	}
 
 }

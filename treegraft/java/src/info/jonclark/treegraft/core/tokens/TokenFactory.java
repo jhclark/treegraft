@@ -37,6 +37,17 @@ public abstract class TokenFactory<T extends Token> {
 	public abstract T makeToken(String str, boolean terminal);
 
 	/**
+	 * Creates a new <code>TokenSequence</code> given an array of tokens. A
+	 * <TokenSequence> can allow for faster aggregate token comparisons for some
+	 * token types.
+	 * 
+	 * @param tokens
+	 *            the tokens to be included in the sequence
+	 * @return a token sequence of the tokens in the given array
+	 */
+	public abstract TokenSequence<T> makeTokenSequence(T[] tokens);
+
+	/**
 	 * Gets the original string representation of a <code>Token</code>.
 	 * 
 	 * @param tok

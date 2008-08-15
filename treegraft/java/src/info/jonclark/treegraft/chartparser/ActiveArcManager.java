@@ -1,8 +1,10 @@
 package info.jonclark.treegraft.chartparser;
 
 import info.jonclark.log.LogUtils;
+import info.jonclark.stat.ProfilerTimer;
 import info.jonclark.treegraft.core.rules.GrammarRule;
 import info.jonclark.treegraft.core.tokens.Token;
+import info.jonclark.treegraft.core.tokens.TokenSequence;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -22,7 +24,12 @@ import java.util.logging.Logger;
  */
 public class ActiveArcManager<R extends GrammarRule<T>, T extends Token> {
 
+	public static final boolean DO_AMBIGUITY_PACKING = true;
 	private static final Logger log = LogUtils.getLogger();
+
+	private final ProfilerTimer createNonterminalArcAmbiguityLookup;
+	private final ProfilerTimer createNonterminalArcConstructor;
+	private final ProfilerTimer createNonterminalArcAdd;
 
 	/**
 	 * Initial ArrayList capacity where potential ambiguities may be packed.
@@ -43,7 +50,7 @@ public class ActiveArcManager<R extends GrammarRule<T>, T extends Token> {
 	}
 
 	private final HashMap<T, ArcGroup>[] incompleteArcs;
-	private final HashMap<R, ActiveArc<R, T>>[] initialArcs;
+	private final HashMap<TokenSequence<T>, HashMap<T, ActiveArc<R, T>>>[][] packedArcs;
 	private ArrayList<ActiveArc<R, T>> newlyCompletedArcs = new ArrayList<ActiveArc<R, T>>();
 
 	private int size = 0;
@@ -55,16 +62,46 @@ public class ActiveArcManager<R extends GrammarRule<T>, T extends Token> {
 	 *            The length in tokens of the source input string to be parsed.
 	 */
 	@SuppressWarnings("unchecked")
-	public ActiveArcManager(int inputSize) {
+	public ActiveArcManager(int inputSize, ProfilerTimer parentTimer) {
 
 		this.incompleteArcs = (HashMap<T, ArcGroup>[]) new HashMap[inputSize + 1];
 		for (int i = 0; i < incompleteArcs.length; i++) {
 			this.incompleteArcs[i] = new HashMap<T, ArcGroup>();
 		}
 
-		this.initialArcs = new HashMap[inputSize + 1];
-		for (int i = 0; i < initialArcs.length; i++) {
-			this.initialArcs[i] = new HashMap<R, ActiveArc<R, T>>();
+		this.packedArcs = new HashMap[inputSize + 1][inputSize + 1];
+
+		this.createNonterminalArcAmbiguityLookup =
+				ProfilerTimer.newTimer("createNonterminalArcAmbiguityLookup", parentTimer, true,
+						false);
+		this.createNonterminalArcConstructor =
+				ProfilerTimer.newTimer("createNonterminalArcConstructor", parentTimer, true, false);
+		this.createNonterminalArcAdd =
+				ProfilerTimer.newTimer("createNonterminalArcAdd", parentTimer, true, false);
+	}
+
+	private ActiveArc<R, T> getPackedArc(int startIndex, int endIndex, T neededConstituent,
+			TokenSequence<T> packingString) {
+
+		HashMap<TokenSequence<T>, HashMap<T, ActiveArc<R, T>>> packingStringToNeededConstituentMap =
+				packedArcs[startIndex][endIndex];
+		if (packingStringToNeededConstituentMap == null) {
+			return null;
+		} else {
+			HashMap<T, ActiveArc<R, T>> neededConstituentMap =
+					packingStringToNeededConstituentMap.get(packingString);
+			if (neededConstituentMap == null) {
+				return null;
+			} else {
+				ActiveArc<R, T> arc = neededConstituentMap.get(neededConstituent);
+				if (arc == null) {
+					return null;
+				} else {
+					assert arc.getStartIndex() == startIndex : "Start index mismatch";
+					assert arc.getEndIndex() == endIndex : "End index mismatch";
+					return arc;
+				}
+			}
 		}
 	}
 
@@ -75,26 +112,65 @@ public class ActiveArcManager<R extends GrammarRule<T>, T extends Token> {
 	 * @param lexicalRule
 	 * @return
 	 */
-	public ActiveArc<R, T> createTerminalArc(int i, R lexicalRule) {
-		ActiveArc<R, T> ruleArc = new ActiveArc<R, T>(i, i + 1, 1, lexicalRule);
-		add(ruleArc);
+	public ActiveArc<R, T> createTerminalArc(int i, R lexicalRule, Key<R, T> dummyKey) {
+
+		ActiveArc<R, T> ruleArc = null;
+		if (DO_AMBIGUITY_PACKING) {
+			T nextNeed = null;
+			if (lexicalRule.getRhs().length > 1) {
+				nextNeed = lexicalRule.getRhs()[0];
+			}
+			ruleArc = getPackedArc(i, i + 1, nextNeed, lexicalRule.getArcPackingString());
+		}
+
+		if (ruleArc == null) {
+			ruleArc = new ActiveArc<R, T>(i, i + 1, 1, lexicalRule);
+			ruleArc.addBackpointer(0, dummyKey);
+			add(ruleArc);
+		} else {
+			// if we already have an arc here, then it can only have been
+			// triggered by the same lexical item for which a backpointer
+			// already exists, so there is no reason to add another
+			// backpointer?????
+			ruleArc.addRule(lexicalRule);
+		}
+
 		return ruleArc;
 	}
 
-	public ActiveArc<R, T> createNonterminalArc(Key<R, T> key, R rule) {
+	public void createNonterminalArc(Key<R, T> key, R rule) {
 
-		ActiveArc<R, T> arc;
-		
-		// first, see if we already have an arc like this that we can pack
-		arc = initialArcs[key.getStartIndex()].get(rule);
+		ActiveArc<R, T> arc = null;
+
+		createNonterminalArcAmbiguityLookup.go();
+		if (DO_AMBIGUITY_PACKING) {
+			// first, see if we already have an arc like this that we can pack
+			T nextNeed = null;
+			if (rule.getRhs().length > 1) {
+				nextNeed = rule.getRhs()[1];
+			}
+			arc =
+					getPackedArc(key.getStartIndex(), key.getEndIndex(), nextNeed,
+							rule.getArcPackingString());
+		}
+		createNonterminalArcAmbiguityLookup.pause();
 
 		if (arc == null) {
 			// create arc with dot after the first RHS constituent
+			createNonterminalArcConstructor.go();
 			arc = new ActiveArc<R, T>(key.getStartIndex(), key.getEndIndex(), 1, rule);
-			initialArcs[key.getStartIndex()].put(rule, arc);
+			arc.addBackpointer(0, key);
+			createNonterminalArcConstructor.pause();
+
+			createNonterminalArcAdd.go();
 			add(arc);
+			createNonterminalArcAdd.pause();
+		} else {
+
+			// if the arc already exists, then it already has a
+			// backpointer??????
+			arc.addRule(rule);
 		}
-		return arc;
 	}
 
 	/**
@@ -117,6 +193,33 @@ public class ActiveArcManager<R extends GrammarRule<T>, T extends Token> {
 
 			log.fine("ADDING COMPLETED ARC: " + arc);
 		}
+
+		// first, the active arc is filed by its start and end indices in the 2d
+		// array
+
+		// next, we file it by the rule-specific packing string (usually the LHS
+		// + RHS)
+		HashMap<TokenSequence<T>, HashMap<T, ActiveArc<R, T>>> packingStringToNeededConstituentMap =
+				packedArcs[arc.getStartIndex()][arc.getEndIndex()];
+
+		if (packingStringToNeededConstituentMap == null) {
+			packingStringToNeededConstituentMap =
+					new HashMap<TokenSequence<T>, HashMap<T, ActiveArc<R, T>>>();
+			packedArcs[arc.getStartIndex()][arc.getEndIndex()] =
+					packingStringToNeededConstituentMap;
+		}
+
+		// finally, we file it by which constituent it needs next
+		HashMap<T, ActiveArc<R, T>> neededConstituentMap =
+				packingStringToNeededConstituentMap.get(arc.getNeededSymbol());
+
+		if (neededConstituentMap == null) {
+			neededConstituentMap = new HashMap<T, ActiveArc<R, T>>();
+			packingStringToNeededConstituentMap.put(arc.getArcPackingString(), neededConstituentMap);
+			packedArcs[arc.getStartIndex()][arc.getEndIndex()] =
+					packingStringToNeededConstituentMap;
+		}
+		neededConstituentMap.put(arc.getNeededSymbol(), arc);
 
 		size++;
 	}
@@ -157,22 +260,42 @@ public class ActiveArcManager<R extends GrammarRule<T>, T extends Token> {
 	 */
 	public void extendArcs(Key<R, T> key) {
 
-		// NOTE: ambiguity packing occurs here (and when keys are added)
-
+		// find any active arcs that need this Key's LHS to advance further
 		int j = key.getStartIndex();
 		T needs = key.getLhs();
 		ArcGroup affectedArcs = incompleteArcs[j].get(needs);
 
 		if (affectedArcs != null) {
-			for (final ActiveArc<R, T> arc : affectedArcs.list) {
-				assert key.getLhs().equals(arc.getRule().getRhs()[arc.getDot()]) : "Key cannot expand this rule: LHS mismatch (key:"
-						+ key.toString() + " arc:" + arc.toString() + ")";
 
-				if (arc.getRule().areConstraintsSatisfied(arc.getDot(), key)) {
+			for (final ActiveArc<R, T> affectedArc : affectedArcs.list) {
+				assert key.getLhs().equals(affectedArc.getRhs()[affectedArc.getDot()]) : "Key cannot expand this rule: LHS mismatch (key:"
+						+ key.toString() + " arc:" + affectedArc.toString() + ")";
 
-					// there was no existing arc, so add a new one
-					ActiveArc<R, T> extendedArc = arc.extend(key);
-					add(extendedArc);
+				if (affectedArc.areConstraintsSatisfied(affectedArc.getDot(), key)) {
+
+					ActiveArc<R, T> extendedArc = null;
+					if (DO_AMBIGUITY_PACKING) {
+						T neededSymbol = null;
+						if (affectedArc.getDot() + 2 < affectedArc.getRhs().length) {
+							neededSymbol = affectedArc.getRhs()[affectedArc.getDot() + 1];
+						}
+						extendedArc =
+								getPackedArc(affectedArc.getStartIndex(), key.getEndIndex(),
+										neededSymbol, affectedArc.getArcPackingString());
+					}
+
+					if (extendedArc == null) {
+						// there was no existing arc, so add a new one
+						extendedArc = affectedArc.extend(key);
+						add(extendedArc);
+					} else {
+						// if the arc already exists, then we've already added
+						// the key with the same LHS and span as a backpointer
+						// to this arc
+						
+						// extendedArc.addBackpointer(affectedArc.getDot(),
+						// key);
+					}
 				}
 			}
 		}

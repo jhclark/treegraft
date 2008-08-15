@@ -23,8 +23,7 @@ public class MonoCFGGrammarLoader {
 			TokenFactory<T> tokenFactory) throws IOException, ParseException {
 
 		Grammar<MonoCFGRule<T>, T> grammar =
-				new Grammar<MonoCFGRule<T>, T>(tokenFactory, Grammar.DEFAULT_START_SYMBOLS,
-						null);
+				new Grammar<MonoCFGRule<T>, T>(tokenFactory, Grammar.DEFAULT_START_SYMBOLS, null);
 
 		BufferedReader in = new BufferedReader(new FileReader(file));
 
@@ -52,7 +51,8 @@ public class MonoCFGGrammarLoader {
 				String after = StringUtils.substringAfter(line, "=>").trim();
 				T[] rhs = SyncCFGGrammarLoader.tokenizeRhs(after, tokenFactory);
 
-				MonoCFGRule<T> rule = new MonoCFGRule<T>(lhs, rhs, null, id, file, nLine);
+				MonoCFGRule<T> rule =
+						new MonoCFGRule<T>(lhs, rhs, null, id, file, nLine, tokenFactory);
 				grammar.addRule(rule, false);
 
 				// parse lexical rules
@@ -65,7 +65,8 @@ public class MonoCFGGrammarLoader {
 				T[] rhsArr = (T[]) new Token[] { rhsWord };
 
 				MonoCFGRule<T> newRule =
-						new MonoCFGRule<T>(lhs, rhsArr, new Constraint[0], id, file, nLine);
+						new MonoCFGRule<T>(lhs, rhsArr, new Constraint[0], id, file, nLine,
+								tokenFactory);
 				grammar.addRule(newRule, true);
 			}
 		}

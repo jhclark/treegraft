@@ -1,9 +1,10 @@
 package info.jonclark.treegraft.core.monocfg;
 
 import info.jonclark.stat.SecondTimer;
-import info.jonclark.treegraft.chartparser.Key;
 import info.jonclark.treegraft.core.rules.GrammarRule;
 import info.jonclark.treegraft.core.tokens.Token;
+import info.jonclark.treegraft.core.tokens.TokenFactory;
+import info.jonclark.treegraft.core.tokens.TokenSequence;
 import info.jonclark.treegraft.unification.Constraint;
 import info.jonclark.util.StringUtils;
 
@@ -24,9 +25,13 @@ public class MonoCFGRule<T extends Token> implements GrammarRule<T> {
 	private final T[] rhs;
 	private final Constraint[] constraints;
 
+	private final TokenSequence<T> packingString;
+
 	private final String id;
 	private final File file;
 	private final int lineNumber;
+
+	private int keysCreated = 0;
 
 	private final SecondTimer cost = new SecondTimer(true, false);
 
@@ -51,13 +56,27 @@ public class MonoCFGRule<T extends Token> implements GrammarRule<T> {
 	 *            was defined
 	 */
 	public MonoCFGRule(T lhs, T[] rhs, Constraint[] constraints, String id, File file,
-			int lineNumber) {
+			int lineNumber, TokenFactory<T> tokenFactory) {
 		this.lhs = lhs;
 		this.rhs = rhs;
 		this.file = file;
 		this.id = id;
 		this.lineNumber = lineNumber;
 		this.constraints = constraints;
+		this.packingString = makePackingString(lhs, rhs, tokenFactory);
+	}
+
+	/**
+	 * Creates a packing string for CFG rules
+	 */
+	public static <T extends Token> TokenSequence<T> makePackingString(T lhs, T[] rhs,
+			TokenFactory<T> tokenFactory) {
+
+		// create the packing string
+		T[] packingArr = tokenFactory.newTokenArray(rhs.length + 1);
+		packingArr[0] = lhs;
+		System.arraycopy(rhs, 0, packingArr, 1, rhs.length);
+		return tokenFactory.makeTokenSequence(packingArr);
 	}
 
 	/**
@@ -140,15 +159,30 @@ public class MonoCFGRule<T extends Token> implements GrammarRule<T> {
 	/**
 	 * {@inheritDoc}
 	 */
-	@Override
-	public <R extends GrammarRule<T>> boolean areConstraintsSatisfied(int sourceRhsIndex,
-			Key<R, T> key) {
-		
+	public <R extends GrammarRule<T>> boolean areConstraintsSatisfied(int sourceRhsIndex, R rule) {
+
 		// no further constraints are needed for a monolingual CFG
 		return true;
 	}
-	
-	
+
+	/**
+	 * {@inheritDoc}
+	 */
+	public TokenSequence<T> getArcPackingString() {
+		return packingString;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	public T getKeyPackingString() {
+		return lhs;
+	}
+
+	public void incrementKeysCreated() {
+		keysCreated++;
+	}
+
 	/**
 	 * {@inheritDoc}
 	 */
@@ -156,7 +190,7 @@ public class MonoCFGRule<T extends Token> implements GrammarRule<T> {
 		// each rule has a unique instance
 		return (this == other);
 	}
-	
+
 	/**
 	 * {@inheritDoc}
 	 */
@@ -172,5 +206,9 @@ public class MonoCFGRule<T extends Token> implements GrammarRule<T> {
 	 */
 	public String toString() {
 		return lhs.getId() + " -> " + StringUtils.untokenize(rhs);
+	}
+
+	public int getKeysCreated() {
+		return keysCreated;
 	}
 }

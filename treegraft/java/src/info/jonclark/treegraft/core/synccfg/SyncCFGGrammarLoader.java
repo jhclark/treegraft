@@ -1,5 +1,6 @@
 package info.jonclark.treegraft.core.synccfg;
 
+import info.jonclark.log.LogUtils;
 import info.jonclark.treegraft.core.grammar.Grammar;
 import info.jonclark.treegraft.core.rules.RuleException;
 import info.jonclark.treegraft.core.tokens.Token;
@@ -15,8 +16,11 @@ import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Logger;
 
 public class SyncCFGGrammarLoader {
+
+	private static final Logger log = LogUtils.getLogger();
 
 	/**
 	 * Reads in a synchronous grammar file (see included data files for example
@@ -25,7 +29,7 @@ public class SyncCFGGrammarLoader {
 	 * @throws RuleException
 	 */
 	public static <T extends Token> Grammar<SyncCFGRule<T>, T> loadSyncGrammar(File file,
-			TokenFactory<T> tokenFactory, HashSet<T> vocabulary) throws IOException, ParseException, RuleException {
+			TokenFactory<T> tokenFactory, HashSet<T> vocabulary) throws IOException, ParseException {
 
 		Grammar<SyncCFGRule<T>, T> grammar =
 				new Grammar<SyncCFGRule<T>, T>(tokenFactory, Grammar.DEFAULT_START_SYMBOLS,
@@ -100,17 +104,25 @@ public class SyncCFGGrammarLoader {
 
 				RuleFeatures ruleFeatures = parseRuleFeatures(in, file, nLine, targetRhs.length);
 
-				SyncCFGRule<T> rule =
-						new SyncCFGRule<T>(sourceLhs, sourceRhs, targetLhs, targetRhs, ruleId,
-								ruleFeatures.alignment, ruleFeatures.score,
-								ruleFeatures.getConstraintArray(), file, nLine.get());
+				try {
+					SyncCFGRule<T> rule =
+							new SyncCFGRule<T>(sourceLhs, sourceRhs, targetLhs, targetRhs, ruleId,
+									ruleFeatures.alignment, ruleFeatures.score,
+									ruleFeatures.getConstraintArray(), file, nLine.get(),
+									tokenFactory);
 
-				grammar.addRule(rule, lexicalInitial);
+					grammar.addRule(rule, lexicalInitial);
+				} catch (RuleException e) {
+					log.severe("Rule exception (skipping rule): " + e.getMessage());
+				}
 
 			}
 		}
 
 		in.close();
+
+		log.info("FINISHED LOADING GRAMMAR: Read " + grammar.getCandidateCount() + " and kept "
+				+ grammar.getAllRules().size() + "...");
 
 		return grammar;
 	}

@@ -2,7 +2,6 @@ package info.jonclark.treegraft.core.synccfg;
 
 import info.jonclark.treegraft.chartparser.Key;
 import info.jonclark.treegraft.core.formatting.parses.ParseFormatter;
-import info.jonclark.treegraft.core.formatting.parses.ParseFormatter.OutputType;
 import info.jonclark.treegraft.core.scoring.ParseScorer;
 import info.jonclark.treegraft.core.tokens.Token;
 import info.jonclark.treegraft.core.tokens.TokenFactory;
@@ -29,7 +28,7 @@ public class SyncParseFormatter<T extends Token> extends ParseFormatter<SyncCFGR
 		this.showScores = showScores;
 	}
 
-	public String formatNonterminalAfter(Key<SyncCFGRule<T>, T> key, double score) {
+	public String formatNonterminalAfter(Key<SyncCFGRule<T>, T> key, SyncCFGRule<T> rule, double score) {
 		if (outputType == OutputType.SOURCE_TREE || outputType == OutputType.TARGET_TREE) {
 			return ") ";
 		} else {
@@ -37,18 +36,18 @@ public class SyncParseFormatter<T extends Token> extends ParseFormatter<SyncCFGR
 		}
 	}
 
-	public String formatNonterminalBefore(Key<SyncCFGRule<T>, T> key, double score) {
+	public String formatNonterminalBefore(Key<SyncCFGRule<T>, T> key, SyncCFGRule<T> rule, double score) {
 
 		// open parentheses
 		if (outputType == OutputType.SOURCE_TREE) {
-			return "(" + tokenFactory.getTokenAsString(key.getRule().getLhs()) + " ";
+			return "(" + tokenFactory.getTokenAsString(key.getLhs()) + " ";
 
 		} else if (outputType == OutputType.TARGET_TREE) {
 			if (showScores) {
-				return "(" + tokenFactory.getTokenAsString(key.getRule().getTargetLhs()) + "="
+				return "(" + tokenFactory.getTokenAsString(rule.getTargetLhs()) + "="
 						+ FormatUtils.formatDoubleExp(score) + " ";
 			} else {
-				return "(" + tokenFactory.getTokenAsString(key.getRule().getTargetLhs()) + " ";
+				return "(" + tokenFactory.getTokenAsString(rule.getTargetLhs()) + " ";
 			}
 		} else {
 			return "";
@@ -66,12 +65,12 @@ public class SyncParseFormatter<T extends Token> extends ParseFormatter<SyncCFGR
 		}
 	}
 
-	public int[] getTargetToSourceRhsAlignment(Key<SyncCFGRule<T>, T> key) {
+	public int[] getTargetToSourceRhsAlignment(Key<SyncCFGRule<T>, T> key, SyncCFGRule<T> rule) {
 
 		if (outputType == OutputType.SOURCE_TREE) {
-			return super.getMonotonicAlignment(key.getRule().getRhs().length);
+			return super.getMonotonicAlignment(rule.getRhs().length);
 		} else if (outputType == OutputType.TARGET_TREE || outputType == OutputType.TARGET_STRING) {
-			return key.getRule().getTargetToSourceAlignment();
+			return rule.getTargetToSourceAlignment();
 		} else {
 			throw new RuntimeException("Unknown type: " + outputType);
 		}
@@ -79,12 +78,12 @@ public class SyncParseFormatter<T extends Token> extends ParseFormatter<SyncCFGR
 	}
 
 	@Override
-	public T[] transduce(Key<SyncCFGRule<T>, T> key) {
+	public T[] transduce(Key<SyncCFGRule<T>, T> key, SyncCFGRule<T> rule) {
 
 		if (outputType == OutputType.SOURCE_TREE) {
-			return key.getRule().getRhs();
+			return rule.getRhs();
 		} else if (outputType == OutputType.TARGET_TREE || outputType == OutputType.TARGET_STRING) {
-			return key.getRule().getTargetRhs();
+			return rule.getTargetRhs();
 		} else {
 			throw new RuntimeException("Unknown type: " + outputType);
 		}
