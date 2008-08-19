@@ -39,6 +39,24 @@ public class ChartParser<R extends GrammarRule<T>, T extends Token> {
 
 	private boolean updated = false;
 
+	private class PostMortem extends Thread {
+		private final Grammar<R, T> grammar;
+
+		public PostMortem(Grammar<R, T> grammar) {
+			this.grammar = grammar;
+		}
+
+		public void run() {
+			ArrayList<R> slowRules = grammar.getNMostProductiveRules(10);
+			System.out.println("TOP " + slowRules.size() + " MOST PRODUCTIVE RULES: ");
+			for (int i = 0; i < slowRules.size(); i++) {
+				R rule = slowRules.get(i);
+				System.out.println((i + 1) + ": " + rule.toString() + " = " + rule.getKeysCreated()
+						+ " keys created directly or indirectly");
+			}
+		}
+	}
+
 	public ChartParser(RuleFactory<R, T> ruleFactory, Grammar<R, T> grammar) {
 		this(ruleFactory, grammar, null);
 	}
@@ -84,17 +102,8 @@ public class ChartParser<R extends GrammarRule<T>, T extends Token> {
 
 		// do a post-mortem analysis of what was taking so @#$! long if the user
 		// kills the process with Ctrl+C or it otherwise dies unexpectedly
-		Runtime.getRuntime().addShutdownHook(new Thread() {
-			public void run() {
-				ArrayList<R> slowRules = grammar.getNMostProductiveRules(100);
-				System.out.println("TOP 10 MOST PRODUCTIVE RULES: ");
-				for (int i = 0; i < slowRules.size(); i++) {
-					R rule = slowRules.get(i);
-					System.out.println((i + 1) + ": " + rule.toString() + " = "
-							+ rule.getKeysCreated() + " keys created directly or indirectly");
-				}
-			}
-		});
+		PostMortem postmortem = new PostMortem(grammar);
+		Runtime.getRuntime().addShutdownHook(postmortem);
 
 		// step 1
 		int i = 0;
@@ -213,6 +222,9 @@ public class ChartParser<R extends GrammarRule<T>, T extends Token> {
 
 		log.info("PARSING COMPLETE: Created " + arcMan.size() + " active arcs and "
 				+ chart.getKeys().size() + " keys.");
+
+		postmortem.run();
+		Runtime.getRuntime().removeShutdownHook(postmortem);
 
 		return chart;
 	}

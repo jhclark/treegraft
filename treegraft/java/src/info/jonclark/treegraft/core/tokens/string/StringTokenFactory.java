@@ -58,10 +58,10 @@ public class StringTokenFactory extends TokenFactory<StringToken> {
 	/**
 	 * {@inheritDoc}
 	 */
-	public StringToken[] makeTerminalTokens(String[] strs) {
+	public StringToken[] makeTokens(String[] strs, boolean terminals) {
 		StringToken[] toks = new StringToken[strs.length];
 		for (int i = 0; i < toks.length; i++)
-			toks[i] = makeToken(strs[i], true);
+			toks[i] = makeToken(strs[i], terminals);
 		return toks;
 	}
 

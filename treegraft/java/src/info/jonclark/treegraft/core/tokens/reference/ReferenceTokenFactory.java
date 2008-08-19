@@ -50,7 +50,7 @@ public class ReferenceTokenFactory extends TokenFactory<ReferenceToken> {
 		}
 		return tok;
 	}
-	
+
 	/**
 	 * {@inheritDoc}
 	 */
@@ -62,10 +62,10 @@ public class ReferenceTokenFactory extends TokenFactory<ReferenceToken> {
 	/**
 	 * {@inheritDoc}
 	 */
-	public ReferenceToken[] makeTerminalTokens(String[] strs) {
+	public ReferenceToken[] makeTokens(String[] strs, boolean terminals) {
 		ReferenceToken[] toks = new ReferenceToken[strs.length];
 		for (int i = 0; i < toks.length; i++)
-			toks[i] = makeToken(strs[i], true);
+			toks[i] = makeToken(strs[i], terminals);
 		return toks;
 	}
 

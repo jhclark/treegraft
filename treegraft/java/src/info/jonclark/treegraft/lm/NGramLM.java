@@ -1,6 +1,7 @@
 package info.jonclark.treegraft.lm;
 
 import info.jonclark.treegraft.core.tokens.Token;
+import info.jonclark.treegraft.core.tokens.TokenSequence;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -8,7 +9,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.HashMap;
 
-public class NGramLM implements LanguageModel {
+public class NGramLM<T extends Token> implements LanguageModel<T> {
 
 	private HashMap<Token, Double>[] probs;
 	private double oovProb;
@@ -36,15 +37,17 @@ public class NGramLM implements LanguageModel {
 		in.close();
 	}
 
-	public double score(Token[] tokens) {
+	public double score(TokenSequence<T> tokens) {
 		if (probs == null)
 			throw new RuntimeException("No language model loaded.");
 
-		int order = tokens.length;
+		int order = tokens.length();
 		Double score = probs[order - 1].get(tokens);
 		while (score == null) {
-			if (order == -1)
-				return oovProb;
+			if (order == 0) {
+				score = oovProb;
+				break;
+			}
 			score = probs[order - 1].get(tokens);
 			order--;
 		}

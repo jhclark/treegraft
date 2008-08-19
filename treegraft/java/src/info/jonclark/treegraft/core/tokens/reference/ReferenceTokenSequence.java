@@ -51,4 +51,12 @@ public class ReferenceTokenSequence implements TokenSequence<ReferenceToken> {
 			return false;
 		}
 	}
+	
+
+	/**
+	 * {@inheritDoc}
+	 */
+	public int length() {
+		return tokens.length;
+	}
 }

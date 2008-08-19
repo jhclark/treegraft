@@ -58,10 +58,10 @@ public class IntegerTokenFactory extends TokenFactory<IntegerToken> {
 	/**
 	 * {@inheritDoc}
 	 */
-	public IntegerToken[] makeTerminalTokens(String[] strs) {
+	public IntegerToken[] makeTokens(String[] strs, boolean terminals) {
 		IntegerToken[] toks = new IntegerToken[strs.length];
 		for (int i = 0; i < toks.length; i++)
-			toks[i] = makeToken(strs[i], true);
+			toks[i] = makeToken(strs[i], terminals);
 		return toks;
 	}
 

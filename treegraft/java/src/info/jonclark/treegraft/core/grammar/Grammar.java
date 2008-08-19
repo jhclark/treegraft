@@ -41,17 +41,36 @@ public class Grammar<R extends GrammarRule<T>, T extends Token> {
 	private HashSet<T> vocabulary;
 	private int nCandidates = 0;
 
+	private HashSet<T> filterLHSTokens;
+	private HashSet<T> filterRHSTokens;
+
 	/**
 	 * @param tokenFactory
 	 * @param startSymbols
 	 * @param vocabulary
-	 *            NULL implies that all rules should be accepted
+	 *            The vocabulary of source-side terminal symbols to which the
+	 *            rules should be filtered. NULL implies that all rules should
+	 *            be accepted
+	 * @param filterLHSTokens
+	 *            The LHS's which will trigger the exclusion of a rule.
+	 * @param filterRHSTokens
+	 *            The RHS's, any one of which will trigger the exclusion of a
+	 *            rule.
 	 */
-	public Grammar(TokenFactory<T> tokenFactory, String[] startSymbols, HashSet<T> vocabulary) {
+	public Grammar(TokenFactory<T> tokenFactory, String[] startSymbols, HashSet<T> vocabulary,
+			HashSet<T> filterLHSTokens, HashSet<T> filterRHSTokens) {
+
 		for (String startSymbol : startSymbols) {
 			this.startSymbols.add(tokenFactory.makeToken(startSymbol, false));
 		}
 		this.vocabulary = vocabulary;
+		this.filterLHSTokens = filterLHSTokens;
+		this.filterRHSTokens = filterRHSTokens;
+		
+		if(filterLHSTokens == null)
+			this.filterLHSTokens = new HashSet<T>();
+		if(filterRHSTokens == null)
+			this.filterRHSTokens = new HashSet<T>();
 	}
 
 	private Grammar() {
@@ -101,15 +120,14 @@ public class Grammar<R extends GrammarRule<T>, T extends Token> {
 
 		boolean good = true;
 
-		if (rule.getLhs().toString().equals("___PUNCT___")
-				|| rule.getLhs().toString().equals("___TRUNC___")) {
+		if (filterLHSTokens.contains(rule.getLhs())) {
 			log.warning("FILTERING RULE: " + rule);
 			good = false;
 		}
 
 		if (good) {
 			for (T rhs : rule.getRhs()) {
-				if (rhs.toString().equals("___S___") || rhs.toString().equals("___CNP___")) {
+				if (filterRHSTokens.contains(rhs)) {
 					log.warning("FILTERING RULE: " + rule);
 					good = false;
 					break;

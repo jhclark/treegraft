@@ -66,6 +66,7 @@ public class TaruHypergraphBuilder<R extends SyncCFGRule<T>, T extends Token> ex
 			// okay
 
 			for (R rule : arc.getRules()) {
+				
 				// check for any terminals coming off of this key
 				for (T token : rule.getTargetRhs()) {
 					if (token.isTerminal()) {
@@ -93,6 +94,7 @@ public class TaruHypergraphBuilder<R extends SyncCFGRule<T>, T extends Token> ex
 
 				permuteEdgesIntoHyperedges(key, items, alignment, targetRhs, backpointers, ruleId,
 						nonterminalId, 0);
+				
 			}
 		}
 	}

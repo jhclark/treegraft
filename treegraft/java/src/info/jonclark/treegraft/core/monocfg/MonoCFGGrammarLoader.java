@@ -23,7 +23,7 @@ public class MonoCFGGrammarLoader {
 			TokenFactory<T> tokenFactory) throws IOException, ParseException {
 
 		Grammar<MonoCFGRule<T>, T> grammar =
-				new Grammar<MonoCFGRule<T>, T>(tokenFactory, Grammar.DEFAULT_START_SYMBOLS, null);
+				new Grammar<MonoCFGRule<T>, T>(tokenFactory, Grammar.DEFAULT_START_SYMBOLS, null, null, null);
 
 		BufferedReader in = new BufferedReader(new FileReader(file));
 

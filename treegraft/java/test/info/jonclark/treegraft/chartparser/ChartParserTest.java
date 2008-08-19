@@ -52,7 +52,7 @@ public class ChartParserTest {
 						"grammar-t2t-2.gra", "lexicon-t2t-2.lex", "phrases-t2t-2.phr" };
 		for (String file : files) {
 			System.out.println("Reading file: " + file);
-			SyncCFGGrammarLoader.loadSyncGrammar(new File("data/huge/" + file), tokenFactory, null);
+			SyncCFGGrammarLoader.loadSyncGrammar(new File("data/huge/" + file), tokenFactory, null, null, null);
 		}
 	}
 
@@ -68,7 +68,7 @@ public class ChartParserTest {
 				new ChartParser<MonoCFGRule<StringToken>, StringToken>(ruleFactory, grammar);
 
 		Chart<MonoCFGRule<StringToken>, StringToken> c =
-				parser.parse(tokenFactory.makeTerminalTokens(StringUtils.tokenize("dogs bark")));
+				parser.parse(tokenFactory.makeTokens(StringUtils.tokenize("dogs bark"), true));
 
 		MonoParseFormatter<StringToken> formatter =
 				new MonoParseFormatter<StringToken>(tokenFactory);
@@ -112,7 +112,7 @@ public class ChartParserTest {
 
 			// parse the input
 			Chart<MonoCFGRule<StringToken>, StringToken> c =
-					parser.parse(tokenFactory.makeTerminalTokens(StringUtils.tokenize(input)));
+					parser.parse(tokenFactory.makeTokens(StringUtils.tokenize(input), true));
 
 			MonoParseFormatter<StringToken> formatter =
 					new MonoParseFormatter<StringToken>(tokenFactory);
@@ -145,7 +145,7 @@ public class ChartParserTest {
 
 		Grammar<SyncCFGRule<StringToken>, StringToken> grammar =
 				SyncCFGGrammarLoader.loadSyncGrammar(new File("data/nlp_lab_sync.txt"),
-						tokenFactory, null);
+						tokenFactory, null, null, null);
 		ChartParser<SyncCFGRule<StringToken>, StringToken> parser =
 				new ChartParser<SyncCFGRule<StringToken>, StringToken>(ruleFactory, grammar);
 
@@ -199,7 +199,7 @@ public class ChartParserTest {
 
 		// parse the input
 		Chart<SyncCFGRule<T>, T> c =
-				parser.parse(tokenFactory.makeTerminalTokens(StringUtils.tokenize(input)));
+				parser.parse(tokenFactory.makeTokens(StringUtils.tokenize(input), true));
 
 		showSyncParses(tokenFactory, c);
 
@@ -367,12 +367,12 @@ public class ChartParserTest {
 
 		Grammar<SyncCFGRule<StringToken>, StringToken> grammar =
 				SyncCFGGrammarLoader.loadSyncGrammar(new File("data/nlp_lab_sync.txt"),
-						tokenFactory, null);
+						tokenFactory, null, null, null);
 		ChartParser<SyncCFGRule<StringToken>, StringToken> parser =
 				new ChartParser<SyncCFGRule<StringToken>, StringToken>(ruleFactory, grammar);
 
 		Chart<SyncCFGRule<StringToken>, StringToken> chart =
-				parser.parse(tokenFactory.makeTerminalTokens(StringUtils.tokenize("the dogs bark")));
+				parser.parse(tokenFactory.makeTokens(StringUtils.tokenize("the dogs bark"), true));
 
 		ParseScorer<SyncCFGRule<StringToken>, StringToken> scorer =
 				new BasicScorer<SyncCFGRule<StringToken>, StringToken>();

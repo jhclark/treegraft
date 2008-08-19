@@ -88,7 +88,9 @@ public abstract class TokenFactory<T extends Token> {
 	 * 
 	 * @param strs
 	 *            the input sequence to be token-ified
+	 * @param terminals
+	 *            Should the created tokens be terminal tokens?
 	 * @return a token array of terminals that represent the given strings
 	 */
-	public abstract T[] makeTerminalTokens(String[] strs);
+	public abstract T[] makeTokens(String[] strs, boolean terminals);
 }

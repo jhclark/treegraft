@@ -44,9 +44,11 @@ public class Chart<R extends GrammarRule<T>, T extends Token> {
 	private final HashMap<T, Key<R, T>>[][] existingKeys;
 	private final ArrayList<Key<R, T>> parses = new ArrayList<Key<R, T>>();
 	private final ArrayList<Key<R, T>> keys = new ArrayList<Key<R, T>>(DEFAULT_CHART_SIZE);
+	private final int inputSize;
 
 	public Chart(int inputSize) {
 		existingKeys = new HashMap[inputSize + 1][inputSize + 1];
+		this.inputSize = inputSize;
 	}
 
 	/**
@@ -175,5 +177,16 @@ public class Chart<R extends GrammarRule<T>, T extends Token> {
 		}
 
 		return formatter.getParseForest();
+	}
+
+	/**
+	 * Gets the length in tokens of the input sequence that was given to the
+	 * parsing algorithm that created this Chart.
+	 * 
+	 * @return the number of tokens in the input sequence that created this
+	 *         chart
+	 */
+	public int getInputLength() {
+		return inputSize;
 	}
 }

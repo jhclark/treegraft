@@ -168,7 +168,7 @@ public class ActiveArcManager<R extends GrammarRule<T>, T extends Token> {
 		} else {
 
 			// if the arc already exists, then it already has a
-			// backpointer??????
+			// backpointer
 			arc.addRule(rule);
 		}
 	}

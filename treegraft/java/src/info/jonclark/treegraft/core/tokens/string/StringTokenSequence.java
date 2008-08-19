@@ -51,4 +51,12 @@ public class StringTokenSequence implements TokenSequence<StringToken> {
 			return false;
 		}
 	}
+	
+
+	/**
+	 * {@inheritDoc}
+	 */
+	public int length() {
+		return tokens.length;
+	}
 }

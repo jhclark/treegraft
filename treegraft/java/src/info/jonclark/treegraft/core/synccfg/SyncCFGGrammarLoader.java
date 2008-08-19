@@ -26,14 +26,26 @@ public class SyncCFGGrammarLoader {
 	 * Reads in a synchronous grammar file (see included data files for example
 	 * format).
 	 * 
+	 * @param file
+	 * @param tokenFactory
+	 * @param vocabulary
+	 *            The vocabulary of source-side terminal symbols to which the
+	 *            rules should be filtered. NULL implies that all rules should
+	 *            be accepted
+	 * @param filterLHSTokens
+	 *            The LHS's which will trigger the exclusion of a rule.
+	 * @param filterRHSTokens
+	 *            The RHS's, any one of which will trigger the exclusion of a
+	 *            rule.
 	 * @throws RuleException
 	 */
 	public static <T extends Token> Grammar<SyncCFGRule<T>, T> loadSyncGrammar(File file,
-			TokenFactory<T> tokenFactory, HashSet<T> vocabulary) throws IOException, ParseException {
+			TokenFactory<T> tokenFactory, HashSet<T> vocabulary, HashSet<T> filterLHSTokens,
+			HashSet<T> filterRHSTokens) throws IOException, ParseException {
 
 		Grammar<SyncCFGRule<T>, T> grammar =
 				new Grammar<SyncCFGRule<T>, T>(tokenFactory, Grammar.DEFAULT_START_SYMBOLS,
-						vocabulary);
+						vocabulary, filterLHSTokens, filterRHSTokens);
 
 		BufferedReader in = new BufferedReader(new FileReader(file));
 

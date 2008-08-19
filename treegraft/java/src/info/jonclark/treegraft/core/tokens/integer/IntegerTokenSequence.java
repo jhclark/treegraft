@@ -51,4 +51,11 @@ public class IntegerTokenSequence implements TokenSequence<IntegerToken> {
 			return false;
 		}
 	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	public int length() {
+		return tokens.length;
+	}
 }
