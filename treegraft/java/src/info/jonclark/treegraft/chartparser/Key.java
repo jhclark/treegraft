@@ -1,10 +1,7 @@
 package info.jonclark.treegraft.chartparser;
 
 import info.jonclark.log.LogUtils;
-import info.jonclark.treegraft.core.formatting.parses.Parse;
-import info.jonclark.treegraft.core.formatting.parses.ParseFormatter;
 import info.jonclark.treegraft.core.rules.GrammarRule;
-import info.jonclark.treegraft.core.scoring.ParseScorer;
 import info.jonclark.treegraft.core.tokens.Token;
 
 import java.util.ArrayList;
@@ -228,156 +225,6 @@ public class Key<R extends GrammarRule<T>, T extends Token> {
 	}
 
 	/**
-	 * Gets the partial (or possibly complete) parses associated with this
-	 * <code>Key</code> as formatted by the <code>ParseFormatter</code>.
-	 * 
-	 * @param formatter
-	 *            an object that determines how the resulting parses will look
-	 *            (including whether they are source trees, target trees, or
-	 *            target strings).
-	 * @return an array of formatted parses
-	 */
-	public List<Parse<R, T>> getPartialParses(ParseFormatter<R, T> formatter) {
-
-		ArrayList<Parse<R, T>> result = new ArrayList<Parse<R, T>>();
-		for (ActiveArc<R, T> arc : this.getActiveArcs()) {
-			for (R rule : arc.getRules()) {
-				result.addAll(unpackNonterminalBackpointers(this, arc, rule, formatter));
-			}
-		}
-		return result;
-	}
-
-	private ArrayList<Parse<R, T>> unpackNonterminalBackpointers(Key<R, T> key,
-			ActiveArc<R, T> arcToUnpack, R ruleToUnpack, ParseFormatter<R, T> formatter) {
-
-		// iterate over all of the RHS constituents for this key
-		int[] targetToSourceAlignment = formatter.getTargetToSourceRhsAlignment(key, ruleToUnpack);
-		T[] transducedRhs = formatter.transduce(key, ruleToUnpack);
-		ArrayList<Parse<R, T>>[] parsesFromBackpointer = new ArrayList[transducedRhs.length];
-
-		// traverse left to right across transduced RHS
-		// when we find a non-terminal, we will use the alignment
-		// to map it back to the backpointers, which we can then
-		// use to continue descending down the source-side backbone
-		// structure
-
-		for (int targetRhsIndex = 0; targetRhsIndex < transducedRhs.length; targetRhsIndex++) {
-
-			if (transducedRhs[targetRhsIndex].isTerminal()) {
-				parsesFromBackpointer[targetRhsIndex] =
-						outputTerminal(formatter, transducedRhs[targetRhsIndex]);
-			} else {
-
-				int sourceRhsIndex = targetToSourceAlignment[targetRhsIndex];
-				List<Key<R, T>> backpointers = arcToUnpack.getBackpointers(sourceRhsIndex);
-				assert backpointers != null : "null backpointer list at index " + sourceRhsIndex
-						+ " for key " + key.toString();
-
-				parsesFromBackpointer[targetRhsIndex] =
-						outputNonterminal(key, ruleToUnpack, sourceRhsIndex, formatter,
-								backpointers);
-			}
-
-		}
-
-		ArrayList<Parse<R, T>> result =
-				makeCrossProductOfParses(parsesFromBackpointer, formatter.getScorer());
-
-		for (Parse<R, T> parse : result) {
-
-			// update parse scores
-			double nodeScore =
-					formatter.getScorer().combineRuleScoreWithChildren(parse.getLogProb(),
-							ruleToUnpack);
-			parse.setCurrentScore(nodeScore);
-
-			// open parentheses (or other nonterminal formatting)
-			parse.prepend(formatter.formatNonterminalBefore(key, ruleToUnpack, nodeScore));
-
-			// close parentheses (or other nonterminal formatting)
-			parse.append(formatter.formatNonterminalAfter(key, ruleToUnpack, nodeScore));
-		}
-
-		return result;
-	}
-
-	private ArrayList<Parse<R, T>> outputTerminal(ParseFormatter<R, T> formatter, T terminal) {
-
-		Parse<R, T> terminalParse = new Parse<R, T>();
-		terminalParse.append(formatter.formatTerminal(terminal));
-
-		ArrayList<Parse<R, T>> list = new ArrayList<Parse<R, T>>(1);
-		list.add(terminalParse);
-		return list;
-
-	}
-
-	private ArrayList<Parse<R, T>> outputNonterminal(Key<R, T> key, R parentRule,
-			int sourceRhsIndex, ParseFormatter<R, T> formatter,
-			List<Key<R, T>> nonterminalBackpointers) {
-
-		ArrayList<Parse<R, T>> parsesFromNonterminal = new ArrayList<Parse<R, T>>();
-
-		// since each backpointer is guaranteed to satisfy for the constraints
-		// only of AT LEAST one rule, we must check to make sure that this
-		// backpointer satisfies the constraints of the current rule before
-		// adding it
-		for (Key<R, T> backpointer : nonterminalBackpointers) {
-			for (ActiveArc<R, T> backpointerArc : backpointer.getActiveArcs()) {
-				for (R backpointerRule : backpointerArc.getRules()) {
-
-					if (parentRule.areConstraintsSatisfied(sourceRhsIndex, backpointerRule)) {
-
-						ArrayList<Parse<R, T>> parsesFromBackpointer =
-								unpackNonterminalBackpointers(backpointer, backpointerArc,
-										backpointerRule, formatter);
-						parsesFromNonterminal.addAll(parsesFromBackpointer);
-					}
-
-				}
-			}
-		}
-
-		return parsesFromNonterminal;
-	}
-
-	private ArrayList<Parse<R, T>> makeCrossProductOfParses(ArrayList<Parse<R, T>>[] parses,
-			ParseScorer<R, T> scorer) {
-
-		ArrayList<Parse<R, T>> currentResultParses = new ArrayList<Parse<R, T>>();
-		Parse<R, T> blankParse = new Parse<R, T>();
-		currentResultParses.add(blankParse);
-
-		// take the crossproduct of the current parse with the new parses
-		for (ArrayList<Parse<R, T>> parseList : parses) {
-
-			ArrayList<Parse<R, T>> expandedResultParses =
-					new ArrayList<Parse<R, T>>(currentResultParses.size() * parseList.size());
-
-			for (Parse<R, T> parseFromBackpointer : parseList) {
-
-				for (Parse<R, T> resultParse : currentResultParses) {
-					Parse<R, T> expandedParse = new Parse<R, T>(resultParse);
-					expandedParse.append(parseFromBackpointer);
-
-					double newScore =
-							scorer.combineChildScores(parseFromBackpointer.getLogProb(),
-									resultParse.getLogProb());
-
-					expandedParse.setCurrentScore(newScore);
-					expandedResultParses.add(expandedParse);
-				}
-			}
-
-			// get ready to tack on the next list of parses to this one
-			currentResultParses = expandedResultParses;
-		}
-
-		return currentResultParses;
-	}
-
-	/**
 	 * Gets a string representation of this <code>Key</code> including the rule
 	 * or terminal symbol that lead to its creation, the source-side indices
 	 * that it covers, and information from the <code>ActiveArc</code> that
@@ -386,10 +233,9 @@ public class Key<R extends GrammarRule<T>, T extends Token> {
 	public String toString() {
 		if (word != null) {
 			return genId() + "=<" + word.getId() + ">" + getLhs() + "(" + getStartIndex() + ","
-					+ getEndIndex() + ")" + "@" + super.hashCode();
+					+ getEndIndex() + ")";
 		} else {
-			return genId() + "=" + getLhs() + "(" + getStartIndex() + "," + getEndIndex() + ")"
-					+ "@" + super.hashCode();
+			return genId() + "=" + getLhs() + "(" + getStartIndex() + "," + getEndIndex() + ")";
 		}
 	}
 }

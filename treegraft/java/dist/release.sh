@@ -1,4 +1,4 @@
-NAME=treegraft-prerelease-2008-08-15
+NAME=treegraft-prerelease-2008-08-19
 
 cp ../lib/JonClarkDotInfo.jar ../lib/Taru.jar .
 mv Taru.jar taru.jar

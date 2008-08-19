@@ -1,20 +1,25 @@
 package info.jonclark.treegraft.search;
 
+import info.jonclark.treegraft.core.scoring.Scored;
+
 import info.jonclark.lang.Pair;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Iterator;
+import java.util.List;
+import java.util.ListIterator;
 
 /**
  * An n-best list of hypotheses.
  * 
  * @author jon
  */
-public class Beam<T> implements Iterable<T> {
+public class Beam<H extends Scored> implements Iterable<H>, List<H> {
 
-	private ArrayList<Double> scores;
-	private ArrayList<T> hypotheses;
+	private ArrayList<H> hypotheses;
 	private double worstScore = Double.POSITIVE_INFINITY;
 	private double bestScore = Double.NEGATIVE_INFINITY;
 	private int beamSize;
@@ -24,8 +29,7 @@ public class Beam<T> implements Iterable<T> {
 	 *            The size of the n-best list to be returned.
 	 */
 	public Beam(int beamSize) {
-		this.scores = new ArrayList<Double>(beamSize);
-		this.hypotheses = new ArrayList<T>(beamSize);
+		this.hypotheses = new ArrayList<H>(beamSize);
 		this.beamSize = beamSize;
 	}
 
@@ -36,29 +40,47 @@ public class Beam<T> implements Iterable<T> {
 	 * @param item
 	 * @param score
 	 */
-	public void add(double score, T item) {
+	public boolean add(H item) {
+		final double score = item.getLogProb();
 		if (hypotheses.size() < beamSize || score >= worstScore) {
 
-			// search for insertion point
-			int index = Collections.binarySearch(scores, score);
+			// TODO: Reimplement this to make it faster since it's time critical
+			// code
+
+			// search for insertion point using hacked up comparator that uses a
+			// null key since we know the implementation detail that the binary
+			// search always passes the score as the second argument to the
+			// comparator
+			int index = Collections.binarySearch(hypotheses, null, new Comparator<H>() {
+				public int compare(H hypFromList, H nulll) {
+					if (score > hypFromList.getLogProb()) {
+						return 1;
+					} else if (score < hypFromList.getLogProb()) {
+						return -1;
+					} else {
+						return 0;
+					}
+				}
+			});
 			index = Math.abs(index);
 
 			// let worst item fall out of the beam, if needed
 			if (hypotheses.size() == beamSize) {
 				hypotheses.remove(0);
-				scores.remove(0);
 			}
 
 			// insert new item and update scores
-			if (index >= scores.size()) {
-				scores.add(score);
+			if (index >= hypotheses.size()) {
 				hypotheses.add(item);
 			} else {
-				scores.add(index, score);
 				hypotheses.add(index, item);
 			}
-			worstScore = scores.get(0);
-			bestScore = scores.get(scores.size() - 1);
+			worstScore = hypotheses.get(0).getLogProb();
+			bestScore = hypotheses.get(hypotheses.size() - 1).getLogProb();
+
+			return true;
+		} else {
+			return false;
 		}
 	}
 
@@ -67,28 +89,12 @@ public class Beam<T> implements Iterable<T> {
 	 * 
 	 * @return
 	 */
-	public T getBest() {
+	public H getBest() {
 		if (hypotheses.size() == 0)
 			return null;
 
-		T best = hypotheses.get(hypotheses.size() - 1);
+		H best = hypotheses.get(hypotheses.size() - 1);
 		return best;
-	}
-
-	/**
-	 * Get entries in ranked order with entry 0 being the best
-	 * 
-	 * @return
-	 */
-	@SuppressWarnings("unchecked")
-	public Pair<Double, T>[] getAll() {
-		Pair<Double, T>[] arr = (Pair<Double, T>[]) new Pair[hypotheses.size()];
-
-		for (int i = scores.size() - 1; i >= 0; i--) {
-			arr[i] = new Pair<Double, T>(scores.get(i), hypotheses.get(i));
-		}
-
-		return arr;
 	}
 
 	public double getBestScore() {
@@ -107,7 +113,99 @@ public class Beam<T> implements Iterable<T> {
 		return hypotheses.size();
 	}
 
-	public Iterator<T> iterator() {
+	public Iterator<H> iterator() {
 		return hypotheses.iterator();
+	}
+
+	public void add(int index, H element) {
+		throw new Error("Unsupported method.");
+	}
+
+	public boolean addAll(Collection<? extends H> c) {
+		boolean changed = false;
+		for (H h : c) {
+			if (add(h)) {
+				changed = true;
+			}
+		}
+		return changed;
+	}
+
+	public boolean addAll(int index, Collection<? extends H> c) {
+		throw new Error("Unsupported method.");
+	}
+
+	public void clear() {
+		hypotheses.clear();
+		worstScore = Double.POSITIVE_INFINITY;
+		bestScore = Double.NEGATIVE_INFINITY;
+	}
+
+	public boolean contains(Object o) {
+		return hypotheses.contains(o);
+	}
+
+	public boolean containsAll(Collection<?> c) {
+		return hypotheses.containsAll(c);
+	}
+
+	public H get(int index) {
+		return hypotheses.get(index);
+	}
+
+	public int indexOf(Object o) {
+		return hypotheses.indexOf(o);
+	}
+
+	public boolean isEmpty() {
+		return hypotheses.isEmpty();
+	}
+
+	public int lastIndexOf(Object o) {
+		return hypotheses.lastIndexOf(o);
+	}
+
+	public ListIterator<H> listIterator() {
+		throw new Error("Unsupported method.");
+	}
+
+	public ListIterator<H> listIterator(int index) {
+		throw new Error("Unsupported method.");
+	}
+
+	public boolean remove(Object o) {
+		throw new Error("Unsupported method.");
+	}
+
+	public H remove(int index) {
+		throw new Error("Unsupported method.");
+	}
+
+	public boolean removeAll(Collection<?> c) {
+		throw new Error("Unsupported method.");
+	}
+
+	public boolean retainAll(Collection<?> c) {
+		throw new Error("Unsupported method.");
+	}
+
+	public H set(int index, H element) {
+		throw new Error("Unsupported method.");
+	}
+
+	public int size() {
+		return hypotheses.size();
+	}
+
+	public List<H> subList(int fromIndex, int toIndex) {
+		return hypotheses.subList(fromIndex, toIndex);
+	}
+
+	public Object[] toArray() {
+		return hypotheses.toArray();
+	}
+
+	public <T> T[] toArray(T[] a) {
+		return hypotheses.toArray(a);
 	}
 }

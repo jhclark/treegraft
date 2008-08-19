@@ -1,8 +1,8 @@
 package info.jonclark.treegraft.chartparser;
 
+import info.jonclark.treegraft.core.forestunpacking.ForestUnpacker;
+import info.jonclark.treegraft.core.forestunpacking.parses.Parse;
 import info.jonclark.treegraft.core.formatting.forest.ParseForestFormatter;
-import info.jonclark.treegraft.core.formatting.parses.Parse;
-import info.jonclark.treegraft.core.formatting.parses.ParseFormatter;
 import info.jonclark.treegraft.core.rules.GrammarRule;
 import info.jonclark.treegraft.core.tokens.Token;
 
@@ -144,14 +144,14 @@ public class Chart<R extends GrammarRule<T>, T extends Token> {
 	 * @return an array of formatted grammatical parses
 	 */
 	@SuppressWarnings("unchecked")
-	public Parse<R, T>[] getGrammaticalParses(ParseFormatter<R, T> formatter) {
-		ArrayList<Parse<R, T>> grammaticalParses = new ArrayList<Parse<R, T>>();
+	public Parse<T>[] getGrammaticalParses(ForestUnpacker<R,T> unpacker) {
+		ArrayList<Parse<T>> grammaticalParses = new ArrayList<Parse<T>>();
 		for (final Key<R, T> k : parses) {
-			for (final Parse<R, T> p : k.getPartialParses(formatter)) {
+			for (final Parse<T> p : unpacker.getPartialParses(k)) {
 				grammaticalParses.add(p);
 			}
 		}
-		return (Parse<R, T>[]) grammaticalParses.toArray(new Parse[grammaticalParses.size()]);
+		return (Parse<T>[]) grammaticalParses.toArray(new Parse[grammaticalParses.size()]);
 	}
 
 	/**

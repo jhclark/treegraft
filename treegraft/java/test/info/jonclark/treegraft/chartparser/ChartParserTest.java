@@ -2,20 +2,21 @@ package info.jonclark.treegraft.chartparser;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import info.jonclark.treegraft.core.formatting.parses.Parse;
-import info.jonclark.treegraft.core.formatting.parses.ParseFormatter.OutputType;
+import info.jonclark.treegraft.core.forestunpacking.ForestUnpacker;
+import info.jonclark.treegraft.core.forestunpacking.parses.BasicTreeFormatter;
+import info.jonclark.treegraft.core.forestunpacking.parses.Parse;
+import info.jonclark.treegraft.core.forestunpacking.pruning.CrossProductParsePruner;
 import info.jonclark.treegraft.core.grammar.Grammar;
 import info.jonclark.treegraft.core.monocfg.MonoCFGGrammarLoader;
 import info.jonclark.treegraft.core.monocfg.MonoCFGRule;
 import info.jonclark.treegraft.core.monocfg.MonoCFGRuleFactory;
-import info.jonclark.treegraft.core.monocfg.MonoParseFormatter;
+import info.jonclark.treegraft.core.monocfg.MonoCFGRuleTransducer;
 import info.jonclark.treegraft.core.rules.GrammarRule;
 import info.jonclark.treegraft.core.scoring.BasicScorer;
-import info.jonclark.treegraft.core.scoring.ParseScorer;
 import info.jonclark.treegraft.core.synccfg.SyncCFGGrammarLoader;
 import info.jonclark.treegraft.core.synccfg.SyncCFGRule;
 import info.jonclark.treegraft.core.synccfg.SyncCFGRuleFactory;
-import info.jonclark.treegraft.core.synccfg.SyncParseFormatter;
+import info.jonclark.treegraft.core.synccfg.SyncCFGRuleTransducer;
 import info.jonclark.treegraft.core.tokens.Token;
 import info.jonclark.treegraft.core.tokens.TokenFactory;
 import info.jonclark.treegraft.core.tokens.string.StringToken;
@@ -32,6 +33,11 @@ import java.util.List;
 import org.junit.Test;
 
 public class ChartParserTest {
+	
+	private <T extends Token> ForestUnpacker<SyncCFGRule<T>, T> getSyncUnpacker() {
+		return new ForestUnpacker<SyncCFGRule<T>, T>(new BasicScorer<SyncCFGRule<T>, T>(),
+				new CrossProductParsePruner<SyncCFGRule<T>, T>(), new SyncCFGRuleTransducer<T>());
+	}
 
 	public void testParseRuleFeatures() throws ParseException {
 
@@ -52,8 +58,27 @@ public class ChartParserTest {
 						"grammar-t2t-2.gra", "lexicon-t2t-2.lex", "phrases-t2t-2.phr" };
 		for (String file : files) {
 			System.out.println("Reading file: " + file);
-			SyncCFGGrammarLoader.loadSyncGrammar(new File("data/huge/" + file), tokenFactory, null, null, null);
+			SyncCFGGrammarLoader.loadSyncGrammar(new File("data/huge/" + file), tokenFactory, null,
+					null, null);
 		}
+	}
+
+	private <T extends Token> String[] getParses(TokenFactory<T> tokenFactory,
+			Chart<MonoCFGRule<T>, T> c) {
+
+		BasicTreeFormatter<T> formatter = new BasicTreeFormatter<T>(tokenFactory, true, false);
+
+		ForestUnpacker<MonoCFGRule<T>, T> unpacker =
+				new ForestUnpacker<MonoCFGRule<T>, T>(new BasicScorer<MonoCFGRule<T>, T>(),
+						new CrossProductParsePruner<MonoCFGRule<T>, T>(),
+						new MonoCFGRuleTransducer<T>());
+
+		Parse<T>[] parses = c.getGrammaticalParses(unpacker);
+		String[] result = new String[parses.length];
+		for (int i = 0; i < result.length; i++) {
+			result[i] = parses[i].getTargetTree().toString(formatter);
+		}
+		return result;
 	}
 
 	public void testMonoChartParser() throws Exception {
@@ -70,11 +95,9 @@ public class ChartParserTest {
 		Chart<MonoCFGRule<StringToken>, StringToken> c =
 				parser.parse(tokenFactory.makeTokens(StringUtils.tokenize("dogs bark"), true));
 
-		MonoParseFormatter<StringToken> formatter =
-				new MonoParseFormatter<StringToken>(tokenFactory);
-		Parse<MonoCFGRule<StringToken>, StringToken>[] parses = c.getGrammaticalParses(formatter);
+		String[] parses = getParses(tokenFactory, c);
 		assertEquals(1, parses.length);
-		assertEquals("(S (NP (N dogs))(VP (V bark)))", parses[0].toString());
+		assertEquals("(S (NP (N dogs))(VP (V bark)))", parses[0]);
 	}
 
 	public void testNLPLabParsesMono() throws Exception {
@@ -114,13 +137,10 @@ public class ChartParserTest {
 			Chart<MonoCFGRule<StringToken>, StringToken> c =
 					parser.parse(tokenFactory.makeTokens(StringUtils.tokenize(input), true));
 
-			MonoParseFormatter<StringToken> formatter =
-					new MonoParseFormatter<StringToken>(tokenFactory);
-			Parse<MonoCFGRule<StringToken>, StringToken>[] parses =
-					c.getGrammaticalParses(formatter);
+			String[] parses = getParses(tokenFactory, c);
 			System.out.println("Found " + parses.length + " parses.");
-			for (final Parse<MonoCFGRule<StringToken>, StringToken> x : parses) {
-				System.out.println(x.toString());
+			for (String parse : parses) {
+				System.out.println(parse);
 			}
 
 			// now see if the resulting chart looks right
@@ -203,18 +223,19 @@ public class ChartParserTest {
 
 		showSyncParses(tokenFactory, c);
 
-		ParseScorer<SyncCFGRule<T>, T> scorer = new BasicScorer<SyncCFGRule<T>, T>();
-		SyncParseFormatter<T> targetFormatter =
-				new SyncParseFormatter<T>(tokenFactory, OutputType.TARGET_TREE, scorer, true);
+		ForestUnpacker<SyncCFGRule<T>, T> unpacker = getSyncUnpacker();
+		BasicTreeFormatter<T> formatter = new BasicTreeFormatter<T>(tokenFactory, true, true);
 
+		
 		// now see if the resulting chart looks right
 		List<Key<SyncCFGRule<T>, T>> keys = c.getKeys();
 		System.out.println("Got " + keys.size() + " keys");
 		for (Key<SyncCFGRule<T>, T> key : keys) {
 			System.out.print("Actual key: " + key.toString() + " -> ");
-			List<Parse<SyncCFGRule<T>, T>> partialParses = key.getPartialParses(targetFormatter);
-			for (Parse<SyncCFGRule<T>, T> parse : partialParses) {
-				System.out.print(parse.toString() + "; ");
+			List<Parse<T>> partialParses = unpacker.getPartialParses(key);
+			for (Parse<T> parse : partialParses) {
+				String str = parse.getTargetTree().toString(formatter);
+				System.out.print(str + "; ");
 			}
 			System.out.println();
 		}
@@ -245,9 +266,8 @@ public class ChartParserTest {
 	private <T extends Token> void checkTargetKey(List<Key<SyncCFGRule<T>, T>> matchingSourceKeys,
 			String[] expectedTargetKeys, TokenFactory<T> tokenFactory) throws ParseException {
 
-		ParseScorer<SyncCFGRule<T>, T> scorer = new BasicScorer<SyncCFGRule<T>, T>();
-		SyncParseFormatter<T> formatter =
-				new SyncParseFormatter<T>(tokenFactory, OutputType.TARGET_TREE, scorer, true);
+		ForestUnpacker<SyncCFGRule<T>, T> unpacker = getSyncUnpacker();
+		BasicTreeFormatter<T> formatter = new BasicTreeFormatter<T>(tokenFactory, true, true);
 
 		for (String expectedTargetKey : expectedTargetKeys) {
 			System.out.println("Checking for target parse: " + expectedTargetKey);
@@ -255,8 +275,8 @@ public class ChartParserTest {
 			boolean found = false;
 			for (Key<SyncCFGRule<T>, T> matchingSourceKey : matchingSourceKeys) {
 
-				List<Parse<SyncCFGRule<T>, T>> partialParses =
-						matchingSourceKey.getPartialParses(formatter);
+				List<Parse<T>> partialParses =
+						unpacker.getPartialParses(matchingSourceKey);
 
 				// show actual partial parses
 				// for (Parse<SyncCFGRule<T>, T> parse : partialParses) {
@@ -267,8 +287,10 @@ public class ChartParserTest {
 				// do inefficient search over all parses
 				expectedTargetKey = expectedTargetKey.trim();
 
-				for (Parse<SyncCFGRule<T>, T> parse : partialParses) {
-					if (expectedTargetKey.equals(parse.toString())) {
+				for (Parse<T> parse : partialParses) {
+					String actualParse = parse.getTargetTree().toString(formatter);
+					System.out.println(actualParse);
+					if (expectedTargetKey.equals(actualParse)) {
 						found = true;
 						assertTrue("Got " + partialParses.size()
 								+ " partial parses instead of the expected "
@@ -341,73 +363,18 @@ public class ChartParserTest {
 	private <T extends Token> void showSyncParses(TokenFactory<T> tokenFactory,
 			Chart<SyncCFGRule<T>, T> c) {
 
-		// show parses found
-		ParseScorer<SyncCFGRule<T>, T> scorer = new BasicScorer<SyncCFGRule<T>, T>();
+		BasicTreeFormatter<T> formatter = new BasicTreeFormatter<T>(tokenFactory, true, false);
+		ForestUnpacker<SyncCFGRule<T>, T> unpacker =
+				new ForestUnpacker<SyncCFGRule<T>, T>(new BasicScorer<SyncCFGRule<T>, T>(),
+						new CrossProductParsePruner<SyncCFGRule<T>, T>(),
+						new SyncCFGRuleTransducer<T>());
 
-		for (OutputType outputType : OutputType.values()) {
-			SyncParseFormatter<T> formatter =
-					new SyncParseFormatter<T>(tokenFactory, outputType, scorer, true);
-
-			Parse<SyncCFGRule<T>, T>[] parses = c.getGrammaticalParses(formatter);
-			System.out.println(parses.length + " parses found.");
-			for (final Parse<SyncCFGRule<T>, T> x : parses) {
-				System.out.println(outputType + ": " + x.toString());
-			}
+		Parse<T>[] parses = c.getGrammaticalParses(unpacker);
+		System.out.println(parses.length + " parses found.");
+		for (int i = 0; i < parses.length; i++) {
+			String src = parses[i].getSourceTree().toString(formatter);
+			String tgt = parses[i].getTargetTree().toString(formatter);
+			System.out.println(src + " -> " + tgt);
 		}
-	}
-
-	public void testSyncChartParser() throws Exception {
-
-		StringTokenFactory tokenFactory = new StringTokenFactory();
-		SyncCFGRuleFactory<StringToken> ruleFactory =
-				new SyncCFGRuleFactory<StringToken>(tokenFactory);
-
-		File file = new File("data/de-en.gra");
-		// File file = new File("data/test_sync.gra");
-
-		Grammar<SyncCFGRule<StringToken>, StringToken> grammar =
-				SyncCFGGrammarLoader.loadSyncGrammar(new File("data/nlp_lab_sync.txt"),
-						tokenFactory, null, null, null);
-		ChartParser<SyncCFGRule<StringToken>, StringToken> parser =
-				new ChartParser<SyncCFGRule<StringToken>, StringToken>(ruleFactory, grammar);
-
-		Chart<SyncCFGRule<StringToken>, StringToken> chart =
-				parser.parse(tokenFactory.makeTokens(StringUtils.tokenize("the dogs bark"), true));
-
-		ParseScorer<SyncCFGRule<StringToken>, StringToken> scorer =
-				new BasicScorer<SyncCFGRule<StringToken>, StringToken>();
-		SyncParseFormatter<StringToken> formatter;
-		Parse<SyncCFGRule<StringToken>, StringToken>[] parses;
-
-		for (OutputType outputType : OutputType.values()) {
-			formatter = new SyncParseFormatter<StringToken>(tokenFactory, outputType, scorer, true);
-
-			parses = chart.getGrammaticalParses(formatter);
-			System.out.println(parses.length + " parses found.");
-			for (final Parse<SyncCFGRule<StringToken>, StringToken> x : parses) {
-				System.out.println(outputType + ": " + x.toString());
-			}
-		}
-
-		formatter =
-				new SyncParseFormatter<StringToken>(tokenFactory, OutputType.SOURCE_TREE, scorer,
-						true);
-		parses = chart.getGrammaticalParses(formatter);
-		assertEquals(1, parses.length);
-		assertEquals("(S (NP (N the dogs))(VP (V bark)))", parses[0].toString());
-
-		formatter =
-				new SyncParseFormatter<StringToken>(tokenFactory, OutputType.TARGET_TREE, scorer,
-						true);
-		parses = chart.getGrammaticalParses(formatter);
-		assertEquals(1, parses.length);
-		assertEquals("(S (NP (N perros))(VP_ES (V come)))", parses[0].toString());
-
-		formatter =
-				new SyncParseFormatter<StringToken>(tokenFactory, OutputType.TARGET_STRING, scorer,
-						true);
-		parses = chart.getGrammaticalParses(formatter);
-		assertEquals(1, parses.length);
-		assertEquals("perros come", parses[0].toString());
 	}
 }

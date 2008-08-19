@@ -1,6 +1,7 @@
 package info.jonclark.treegraft.core.synccfg;
 
 import info.jonclark.stat.SecondTimer;
+import info.jonclark.treegraft.core.forestunpacking.parses.BasicTreeFormatter;
 import info.jonclark.treegraft.core.monocfg.MonoCFGRule;
 import info.jonclark.treegraft.core.rules.GrammarRule;
 import info.jonclark.treegraft.core.rules.RuleException;
@@ -17,7 +18,7 @@ import java.io.File;
  * A synchronous version of a Context-Free GrammarRule.
  * 
  * @see SyncCFGRuleFactory
- * @see SyncParseFormatter
+ * @see BasicTreeFormatter
  * @author Jonathan Clark
  * @param <T>
  *            The token type being used in this <code>ChartParser</code>

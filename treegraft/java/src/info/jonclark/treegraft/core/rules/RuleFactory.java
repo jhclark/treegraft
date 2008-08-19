@@ -1,6 +1,6 @@
 package info.jonclark.treegraft.core.rules;
 
-import info.jonclark.treegraft.core.formatting.parses.ParseFormatter;
+import info.jonclark.treegraft.core.forestunpacking.parses.TreeFormatter;
 import info.jonclark.treegraft.core.tokens.Token;
 
 /**
@@ -25,21 +25,4 @@ public interface RuleFactory<R extends GrammarRule<T>, T extends Token> {
 	 * @return the new dummy rule
 	 */
 	public R makeDummyRule(T token);
-
-	/**
-	 * Gets a <code>ParseFormatters</code> that provides a default method of
-	 * visualizing this rule type.
-	 * 
-	 * @return an <code>ParseFormatter</code>
-	 */
-	public ParseFormatter<R, T> getDefaultFormatter();
-
-	/**
-	 * Gets an array of <code>ParseFormatters</code> that can provide several
-	 * different ways of visualizing partial parses during debugging when using
-	 * this rule type.
-	 * 
-	 * @return an array of <code>ParseFormatters</code>
-	 */
-	public ParseFormatter<R, T>[] getDebugFormatters();
 }

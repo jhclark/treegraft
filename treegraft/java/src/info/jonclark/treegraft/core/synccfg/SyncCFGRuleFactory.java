@@ -1,7 +1,5 @@
 package info.jonclark.treegraft.core.synccfg;
 
-import info.jonclark.treegraft.core.formatting.parses.ParseFormatter;
-import info.jonclark.treegraft.core.formatting.parses.ParseFormatter.OutputType;
 import info.jonclark.treegraft.core.grammar.Grammar;
 import info.jonclark.treegraft.core.rules.RuleException;
 import info.jonclark.treegraft.core.rules.RuleFactory;
@@ -48,21 +46,4 @@ public class SyncCFGRuleFactory<T extends Token> implements RuleFactory<SyncCFGR
 			throw new RuntimeException(e);
 		}
 	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	public ParseFormatter<SyncCFGRule<T>, T> getDefaultFormatter() {
-		return new SyncParseFormatter<T>(tokenFactory, OutputType.TARGET_TREE, scorer, true);
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	public ParseFormatter<SyncCFGRule<T>, T>[] getDebugFormatters() {
-		return new ParseFormatter[] {
-				new SyncParseFormatter<T>(tokenFactory, OutputType.SOURCE_TREE, scorer, false),
-				new SyncParseFormatter<T>(tokenFactory, OutputType.TARGET_TREE, scorer, false) };
-	}
-
 }

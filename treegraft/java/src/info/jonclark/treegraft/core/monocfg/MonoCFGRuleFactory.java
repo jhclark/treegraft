@@ -1,6 +1,5 @@
 package info.jonclark.treegraft.core.monocfg;
 
-import info.jonclark.treegraft.core.formatting.parses.ParseFormatter;
 import info.jonclark.treegraft.core.rules.RuleFactory;
 import info.jonclark.treegraft.core.tokens.Token;
 import info.jonclark.treegraft.core.tokens.TokenFactory;
@@ -37,19 +36,5 @@ public class MonoCFGRuleFactory<T extends Token> implements RuleFactory<MonoCFGR
 	public MonoCFGRule<T> makeDummyRule(T token) {
 		return new MonoCFGRule<T>(token, (T[]) new Token[] { token }, new Constraint[0], "DUMMY",
 				new File("null"), 0, tokenFactory);
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	public ParseFormatter<MonoCFGRule<T>, T> getDefaultFormatter() {
-		return new MonoParseFormatter<T>(tokenFactory);
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	public ParseFormatter<MonoCFGRule<T>, T>[] getDebugFormatters() {
-		return new MonoParseFormatter[] { new MonoParseFormatter<T>(tokenFactory) };
 	}
 }
