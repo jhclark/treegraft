@@ -78,28 +78,7 @@ public class BeamSearchDecoder<R extends GrammarRule<T>, T extends Token> {
 								for (Hypothesis<T> hyp1 : beam1) {
 									for (Hypothesis<T> hyp2 : beam2) {
 
-										List<T> combinedTokens =
-												new ArrayList<T>(hyp1.getTokens().size()
-														+ hyp2.getTokens().size());
-										combinedTokens.addAll(hyp1.getTokens());
-										combinedTokens.addAll(hyp2.getTokens());
-
-										// TODO: Fix this completely screwed up
-										// method of combining LM scores
-										// TODO: Add fragmentation penalty
-										// TODO: Add length penalty
-										// TODO: Add bidirectional lexical
-										// scores
-										TokenSequence<T> tokenSequence =
-												tokenFactory.makeTokenSequence(combinedTokens);
-										double lmScore = lm.score(tokenSequence);
-
-										Scores combinedScore =
-												new Scores(hyp1.getLogProb() + hyp2.getLogProb()
-														+ lmScore);
-
-										Hypothesis<T> combinedHyp =
-												new Hypothesis<T>(combinedTokens, combinedScore);
+										Hypothesis<T> combinedHyp = concatenateHypotheses(hyp1, hyp2);
 										outputBeam.add(combinedHyp);
 									}
 								}
@@ -112,5 +91,31 @@ public class BeamSearchDecoder<R extends GrammarRule<T>, T extends Token> {
 
 		// return the hypotheses that cover the whole input
 		return beams[0][beams.length];
+	}
+
+	private Hypothesis<T> concatenateHypotheses(Hypothesis<T> hyp1, Hypothesis<T> hyp2) {
+		List<T> combinedTokens =
+				new ArrayList<T>(hyp1.getTokens().size()
+						+ hyp2.getTokens().size());
+		combinedTokens.addAll(hyp1.getTokens());
+		combinedTokens.addAll(hyp2.getTokens());
+
+		// TODO: Fix this completely screwed up
+		// method of combining LM scores
+		// TODO: Add fragmentation penalty
+		// TODO: Add length penalty
+		// TODO: Add bidirectional lexical
+		// scores
+		TokenSequence<T> tokenSequence =
+				tokenFactory.makeTokenSequence(combinedTokens);
+		double lmScore = lm.score(tokenSequence);
+
+		Scores combinedScore =
+				new Scores(hyp1.getLogProb() + hyp2.getLogProb()
+						+ lmScore);
+
+		Hypothesis<T> combinedHyp =
+				new Hypothesis<T>(combinedTokens, combinedScore);
+		return combinedHyp;
 	}
 }
