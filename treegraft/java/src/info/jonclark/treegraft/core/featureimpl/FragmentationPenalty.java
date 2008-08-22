@@ -1,9 +1,9 @@
 package info.jonclark.treegraft.core.featureimpl;
 
-import info.jonclark.treegraft.core.parses.Parse;
 import info.jonclark.treegraft.core.scoring.Feature;
 import info.jonclark.treegraft.core.tokens.Token;
 import info.jonclark.treegraft.core.tokens.TokenSequence;
+import info.jonclark.treegraft.parsing.parses.Parse;
 import info.jonclark.treegraft.parsing.rules.GrammarRule;
 
 public class FragmentationPenalty<R extends GrammarRule<T>, T extends Token> implements

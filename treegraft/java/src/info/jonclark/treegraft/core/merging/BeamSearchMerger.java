@@ -1,6 +1,5 @@
 package info.jonclark.treegraft.core.merging;
 
-import info.jonclark.treegraft.core.parses.Parse;
 import info.jonclark.treegraft.core.scoring.FeatureScores;
 import info.jonclark.treegraft.core.scoring.Scorer;
 import info.jonclark.treegraft.core.search.Beam;
@@ -8,6 +7,7 @@ import info.jonclark.treegraft.core.tokens.Token;
 import info.jonclark.treegraft.core.tokens.TokenFactory;
 import info.jonclark.treegraft.core.tokens.TokenSequence;
 import info.jonclark.treegraft.decoder.DecoderHypothesis;
+import info.jonclark.treegraft.parsing.parses.Parse;
 import info.jonclark.treegraft.parsing.rules.GrammarRule;
 import info.jonclark.treegraft.parsing.transduction.Transducer;
 

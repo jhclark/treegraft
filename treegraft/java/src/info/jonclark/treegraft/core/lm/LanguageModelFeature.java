@@ -1,9 +1,9 @@
 package info.jonclark.treegraft.core.lm;
 
-import info.jonclark.treegraft.core.parses.Parse;
 import info.jonclark.treegraft.core.scoring.Feature;
 import info.jonclark.treegraft.core.tokens.Token;
 import info.jonclark.treegraft.core.tokens.TokenSequence;
+import info.jonclark.treegraft.parsing.parses.Parse;
 import info.jonclark.treegraft.parsing.rules.GrammarRule;
 
 import java.util.ArrayList;

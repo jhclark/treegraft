@@ -1,12 +1,12 @@
 package info.jonclark.treegraft.parsing.synccfg;
 
 import info.jonclark.stat.SecondTimer;
-import info.jonclark.treegraft.core.parses.BasicTreeFormatter;
 import info.jonclark.treegraft.core.scoring.ProbUtils;
 import info.jonclark.treegraft.core.tokens.Token;
 import info.jonclark.treegraft.core.tokens.TokenFactory;
 import info.jonclark.treegraft.core.tokens.TokenSequence;
 import info.jonclark.treegraft.parsing.monocfg.MonoCFGRule;
+import info.jonclark.treegraft.parsing.parses.BasicTreeFormatter;
 import info.jonclark.treegraft.parsing.rules.GrammarRule;
 import info.jonclark.treegraft.parsing.rules.RuleException;
 import info.jonclark.treegraft.parsing.unification.Constraint;

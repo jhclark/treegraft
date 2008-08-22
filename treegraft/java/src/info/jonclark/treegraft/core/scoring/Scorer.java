@@ -1,9 +1,9 @@
 package info.jonclark.treegraft.core.scoring;
 
-import info.jonclark.treegraft.core.parses.Parse;
 import info.jonclark.treegraft.core.tokens.Token;
 import info.jonclark.treegraft.core.tokens.TokenSequence;
 import info.jonclark.treegraft.decoder.DecoderHypothesis;
+import info.jonclark.treegraft.parsing.parses.Parse;
 import info.jonclark.treegraft.parsing.rules.GrammarRule;
 
 public interface Scorer<R extends GrammarRule<T>, T extends Token> {

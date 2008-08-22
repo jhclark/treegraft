@@ -1,8 +1,8 @@
 package info.jonclark.treegraft.decoder;
 
-import info.jonclark.treegraft.core.parses.Parse;
-import info.jonclark.treegraft.core.parses.TreeFormatter;
 import info.jonclark.treegraft.core.tokens.Token;
+import info.jonclark.treegraft.parsing.parses.Parse;
+import info.jonclark.treegraft.parsing.parses.TreeFormatter;
 
 public class LatticeArc<T extends Token> {
 	

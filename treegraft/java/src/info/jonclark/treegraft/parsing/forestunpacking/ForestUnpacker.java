@@ -1,12 +1,12 @@
-package info.jonclark.treegraft.core.forestunpacking;
+package info.jonclark.treegraft.parsing.forestunpacking;
 
 import info.jonclark.treegraft.core.merging.Merger;
-import info.jonclark.treegraft.core.parses.Parse;
 import info.jonclark.treegraft.core.scoring.FeatureScores;
 import info.jonclark.treegraft.core.scoring.Scorer;
 import info.jonclark.treegraft.core.tokens.Token;
 import info.jonclark.treegraft.parsing.chartparser.ActiveArc;
 import info.jonclark.treegraft.parsing.chartparser.Key;
+import info.jonclark.treegraft.parsing.parses.Parse;
 import info.jonclark.treegraft.parsing.rules.GrammarRule;
 import info.jonclark.treegraft.parsing.transduction.Transducer;
 

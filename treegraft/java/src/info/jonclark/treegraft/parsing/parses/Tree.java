@@ -1,4 +1,4 @@
-package info.jonclark.treegraft.core.parses;
+package info.jonclark.treegraft.parsing.parses;
 
 import info.jonclark.treegraft.core.scoring.FeatureScores;
 import info.jonclark.treegraft.core.tokens.Token;

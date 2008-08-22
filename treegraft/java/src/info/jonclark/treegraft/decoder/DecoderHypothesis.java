@@ -1,9 +1,9 @@
 package info.jonclark.treegraft.decoder;
 
-import info.jonclark.treegraft.core.parses.Parse;
 import info.jonclark.treegraft.core.scoring.FeatureScores;
 import info.jonclark.treegraft.core.scoring.Scored;
 import info.jonclark.treegraft.core.tokens.Token;
+import info.jonclark.treegraft.parsing.parses.Parse;
 
 import java.util.List;
 
