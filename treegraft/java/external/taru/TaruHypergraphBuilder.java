@@ -2,12 +2,12 @@ package taru;
 
 import hyperGraph.HGVertex;
 import hyperGraph.HyperGraph;
-import info.jonclark.treegraft.chartparser.ActiveArc;
-import info.jonclark.treegraft.chartparser.Key;
-import info.jonclark.treegraft.core.formatting.forest.ParseForestFormatter;
-import info.jonclark.treegraft.core.synccfg.SyncCFGRule;
+import info.jonclark.treegraft.core.forestunpacking.ParseForestFormatter;
 import info.jonclark.treegraft.core.tokens.Token;
 import info.jonclark.treegraft.core.tokens.TokenFactory;
+import info.jonclark.treegraft.parsing.chartparser.ActiveArc;
+import info.jonclark.treegraft.parsing.chartparser.Key;
+import info.jonclark.treegraft.parsing.synccfg.SyncCFGRule;
 
 import java.util.ArrayList;
 import java.util.HashMap;

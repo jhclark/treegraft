@@ -3,24 +3,29 @@ package info.jonclark.treegraft.chartparser;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import info.jonclark.treegraft.core.forestunpacking.ForestUnpacker;
-import info.jonclark.treegraft.core.forestunpacking.parses.BasicTreeFormatter;
-import info.jonclark.treegraft.core.forestunpacking.parses.Parse;
-import info.jonclark.treegraft.core.forestunpacking.pruning.CrossProductParsePruner;
-import info.jonclark.treegraft.core.grammar.Grammar;
-import info.jonclark.treegraft.core.monocfg.MonoCFGGrammarLoader;
-import info.jonclark.treegraft.core.monocfg.MonoCFGRule;
-import info.jonclark.treegraft.core.monocfg.MonoCFGRuleFactory;
-import info.jonclark.treegraft.core.monocfg.MonoCFGRuleTransducer;
-import info.jonclark.treegraft.core.rules.GrammarRule;
-import info.jonclark.treegraft.core.scoring.BasicScorer;
-import info.jonclark.treegraft.core.synccfg.SyncCFGGrammarLoader;
-import info.jonclark.treegraft.core.synccfg.SyncCFGRule;
-import info.jonclark.treegraft.core.synccfg.SyncCFGRuleFactory;
-import info.jonclark.treegraft.core.synccfg.SyncCFGRuleTransducer;
+import info.jonclark.treegraft.core.merging.CrossProductParsePruner;
+import info.jonclark.treegraft.core.parses.BasicTreeFormatter;
+import info.jonclark.treegraft.core.parses.Parse;
+import info.jonclark.treegraft.core.recombination.NullRecombiner;
+import info.jonclark.treegraft.core.scoring.Feature;
+import info.jonclark.treegraft.core.scoring.LogLinearScorer;
 import info.jonclark.treegraft.core.tokens.Token;
 import info.jonclark.treegraft.core.tokens.TokenFactory;
 import info.jonclark.treegraft.core.tokens.string.StringToken;
 import info.jonclark.treegraft.core.tokens.string.StringTokenFactory;
+import info.jonclark.treegraft.parsing.chartparser.Chart;
+import info.jonclark.treegraft.parsing.chartparser.ChartParser;
+import info.jonclark.treegraft.parsing.chartparser.Key;
+import info.jonclark.treegraft.parsing.grammar.Grammar;
+import info.jonclark.treegraft.parsing.monocfg.MonoCFGGrammarLoader;
+import info.jonclark.treegraft.parsing.monocfg.MonoCFGRule;
+import info.jonclark.treegraft.parsing.monocfg.MonoCFGRuleFactory;
+import info.jonclark.treegraft.parsing.monocfg.MonoCFGRuleTransducer;
+import info.jonclark.treegraft.parsing.rules.GrammarRule;
+import info.jonclark.treegraft.parsing.synccfg.SyncCFGGrammarLoader;
+import info.jonclark.treegraft.parsing.synccfg.SyncCFGRule;
+import info.jonclark.treegraft.parsing.synccfg.SyncCFGRuleFactory;
+import info.jonclark.treegraft.parsing.synccfg.SyncCFGRuleTransducer;
 import info.jonclark.util.FileUtils;
 import info.jonclark.util.StringUtils;
 
@@ -33,10 +38,11 @@ import java.util.List;
 import org.junit.Test;
 
 public class ChartParserTest {
-	
+
 	private <T extends Token> ForestUnpacker<SyncCFGRule<T>, T> getSyncUnpacker() {
-		return new ForestUnpacker<SyncCFGRule<T>, T>(new BasicScorer<SyncCFGRule<T>, T>(),
-				new CrossProductParsePruner<SyncCFGRule<T>, T>(), new SyncCFGRuleTransducer<T>());
+		return new ForestUnpacker<SyncCFGRule<T>, T>(new LogLinearScorer<SyncCFGRule<T>, T>(new Feature[] {uniDirRuleFeature}, tokenFactory),
+				new CrossProductParsePruner<SyncCFGRule<T>, T>(),
+				new NullRecombiner<SyncCFGRule<T>, T>(), new SyncCFGRuleTransducer<T>());
 	}
 
 	public void testParseRuleFeatures() throws ParseException {
@@ -69,9 +75,9 @@ public class ChartParserTest {
 		BasicTreeFormatter<T> formatter = new BasicTreeFormatter<T>(tokenFactory, true, false);
 
 		ForestUnpacker<MonoCFGRule<T>, T> unpacker =
-				new ForestUnpacker<MonoCFGRule<T>, T>(new BasicScorer<MonoCFGRule<T>, T>(),
+				new ForestUnpacker<MonoCFGRule<T>, T>(new LogLinearScorer<MonoCFGRule<T>, T>(),
 						new CrossProductParsePruner<MonoCFGRule<T>, T>(),
-						new MonoCFGRuleTransducer<T>());
+						new NullRecombiner<MonoCFGRule<T>, T>(), new MonoCFGRuleTransducer<T>());
 
 		Parse<T>[] parses = c.getGrammaticalParses(unpacker);
 		String[] result = new String[parses.length];
@@ -226,7 +232,6 @@ public class ChartParserTest {
 		ForestUnpacker<SyncCFGRule<T>, T> unpacker = getSyncUnpacker();
 		BasicTreeFormatter<T> formatter = new BasicTreeFormatter<T>(tokenFactory, true, true);
 
-		
 		// now see if the resulting chart looks right
 		List<Key<SyncCFGRule<T>, T>> keys = c.getKeys();
 		System.out.println("Got " + keys.size() + " keys");
@@ -275,8 +280,7 @@ public class ChartParserTest {
 			boolean found = false;
 			for (Key<SyncCFGRule<T>, T> matchingSourceKey : matchingSourceKeys) {
 
-				List<Parse<T>> partialParses =
-						unpacker.getPartialParses(matchingSourceKey);
+				List<Parse<T>> partialParses = unpacker.getPartialParses(matchingSourceKey);
 
 				// show actual partial parses
 				// for (Parse<SyncCFGRule<T>, T> parse : partialParses) {
@@ -365,9 +369,9 @@ public class ChartParserTest {
 
 		BasicTreeFormatter<T> formatter = new BasicTreeFormatter<T>(tokenFactory, true, false);
 		ForestUnpacker<SyncCFGRule<T>, T> unpacker =
-				new ForestUnpacker<SyncCFGRule<T>, T>(new BasicScorer<SyncCFGRule<T>, T>(),
+				new ForestUnpacker<SyncCFGRule<T>, T>(new LogLinearScorer<SyncCFGRule<T>, T>(),
 						new CrossProductParsePruner<SyncCFGRule<T>, T>(),
-						new SyncCFGRuleTransducer<T>());
+						new NullRecombiner<SyncCFGRule<T>, T>(), new SyncCFGRuleTransducer<T>());
 
 		Parse<T>[] parses = c.getGrammaticalParses(unpacker);
 		System.out.println(parses.length + " parses found.");

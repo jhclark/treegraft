@@ -1,11 +1,11 @@
 package info.jonclark.treegraft.decoder;
 
-import info.jonclark.treegraft.chartparser.Chart;
-import info.jonclark.treegraft.chartparser.Key;
 import info.jonclark.treegraft.core.forestunpacking.ForestUnpacker;
-import info.jonclark.treegraft.core.forestunpacking.parses.Parse;
-import info.jonclark.treegraft.core.rules.GrammarRule;
+import info.jonclark.treegraft.core.parses.Parse;
 import info.jonclark.treegraft.core.tokens.Token;
+import info.jonclark.treegraft.parsing.chartparser.Chart;
+import info.jonclark.treegraft.parsing.chartparser.Key;
+import info.jonclark.treegraft.parsing.rules.GrammarRule;
 
 import java.util.ArrayList;
 import java.util.List;

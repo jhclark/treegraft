@@ -1,31 +1,34 @@
 package info.jonclark.treegraft.core.forestunpacking;
 
-import info.jonclark.treegraft.chartparser.ActiveArc;
-import info.jonclark.treegraft.chartparser.Key;
-import info.jonclark.treegraft.core.forestunpacking.parses.Parse;
-import info.jonclark.treegraft.core.forestunpacking.pruning.ParsePruner;
-import info.jonclark.treegraft.core.rules.GrammarRule;
-import info.jonclark.treegraft.core.scoring.ParseScorer;
-import info.jonclark.treegraft.core.scoring.Scores;
+import info.jonclark.treegraft.core.merging.ParsePruner;
+import info.jonclark.treegraft.core.parses.Parse;
+import info.jonclark.treegraft.core.recombination.ParseRecombiner;
+import info.jonclark.treegraft.core.scoring.FeatureScores;
+import info.jonclark.treegraft.core.scoring.Scorer;
 import info.jonclark.treegraft.core.tokens.Token;
-import info.jonclark.treegraft.core.transduction.Transducer;
+import info.jonclark.treegraft.parsing.chartparser.ActiveArc;
+import info.jonclark.treegraft.parsing.chartparser.Key;
+import info.jonclark.treegraft.parsing.rules.GrammarRule;
+import info.jonclark.treegraft.parsing.transduction.Transducer;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class ForestUnpacker<R extends GrammarRule<T>, T extends Token> {
 
-	private final ParseScorer<R, T> scorer;
+	private final Scorer<R, T> scorer;
 	private final ParsePruner<R, T> pruner;
+	private final ParseRecombiner<R, T> recombiner;
 	private final Transducer<R, T> transducer;
 
 	// TODO: Pass parses from the left to the parses being created on the right
 	// e.g. we can use these for language model context
-	public ForestUnpacker(ParseScorer<R, T> scorer, ParsePruner<R, T> pruner,
-			Transducer<R, T> transducer) {
+	public ForestUnpacker(Scorer<R, T> scorer, ParsePruner<R, T> pruner,
+			ParseRecombiner<R, T> recombiner, Transducer<R, T> transducer) {
 
 		this.scorer = scorer;
 		this.pruner = pruner;
+		this.recombiner = recombiner;
 		this.transducer = transducer;
 	}
 
@@ -78,6 +81,7 @@ public class ForestUnpacker<R extends GrammarRule<T>, T extends Token> {
 
 				parsesFromBackpointer[targetRhsIndex] =
 						outputNonterminal(key, ruleToUnpack, sourceRhsIndex, backpointers);
+				recombiner.recombine(parsesFromBackpointer[targetRhsIndex], scorer);
 			}
 
 		}
@@ -89,11 +93,9 @@ public class ForestUnpacker<R extends GrammarRule<T>, T extends Token> {
 		for (Parse<T> parse : result) {
 
 			// update parse scores
-			double nodeScore =
-					scorer.combineRuleScoreWithChildren(parse.getLogProb(), ruleToUnpack);
-			Scores dummyScores = new Scores(nodeScore);
-			parse.setCurrentScore(dummyScores);
-			
+			FeatureScores combinedScore = scorer.combineRuleScoreWithChildren(parse, ruleToUnpack);
+			parse.setCurrentScore(combinedScore);
+
 			// TODO: Do this when creating the "empty seed parse"
 			T[] sourceRhs = ruleToUnpack.getRhs();
 			for (int sourceRhsIndex = 0; sourceRhsIndex < sourceRhs.length; sourceRhsIndex++) {
@@ -107,7 +109,8 @@ public class ForestUnpacker<R extends GrammarRule<T>, T extends Token> {
 	}
 
 	private ArrayList<Parse<T>> outputTargetTerminal(R parentRule, T terminal) {
-		Parse<T> terminalParse = new Parse<T>(terminal, false);
+		FeatureScores terminalScore = scorer.scoreTerminalToken(terminal);
+		Parse<T> terminalParse = new Parse<T>(terminal, false, terminalScore);
 
 		ArrayList<Parse<T>> list = new ArrayList<Parse<T>>(1);
 		list.add(terminalParse);

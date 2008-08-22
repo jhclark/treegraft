@@ -1,7 +1,16 @@
 package info.jonclark.treegraft.core.tokens;
 
+import java.util.List;
+
 public interface TokenSequence<T extends Token> {
-	public T[] getTokens();
+	
+	public List<T> getTokens();
+	
+	public TokenSequence<T> keepNLeftMostTokens(int n);
+	
+	public TokenSequence<T> keepNRightMostTokens(int n);
+	
+	public TokenSequence<T> prepend(TokenSequence<T> seq);
 	
 	public int length();
 	

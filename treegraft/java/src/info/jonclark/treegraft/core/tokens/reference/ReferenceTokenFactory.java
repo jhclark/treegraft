@@ -4,6 +4,7 @@ import info.jonclark.treegraft.core.tokens.TokenFactory;
 import info.jonclark.treegraft.core.tokens.TokenSequence;
 
 import java.util.HashMap;
+import java.util.List;
 
 /**
  * A <code>TokenFactory</code> implementation for <code>IntegerTokens</code>.
@@ -55,7 +56,7 @@ public class ReferenceTokenFactory extends TokenFactory<ReferenceToken> {
 	 * {@inheritDoc}
 	 */
 	@Override
-	public TokenSequence<ReferenceToken> makeTokenSequence(ReferenceToken[] tokens) {
+	public TokenSequence<ReferenceToken> makeTokenSequence(List<ReferenceToken> tokens) {
 		return new ReferenceTokenSequence(tokens);
 	}
 

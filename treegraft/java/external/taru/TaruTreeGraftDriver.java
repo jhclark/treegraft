@@ -5,18 +5,20 @@ import hyperGraph.HyperGraph;
 import info.jonclark.log.LogUtils;
 import info.jonclark.properties.SmartProperties;
 import info.jonclark.stat.ProfilerTimer;
-import info.jonclark.treegraft.chartparser.Chart;
-import info.jonclark.treegraft.chartparser.ChartParser;
-import info.jonclark.treegraft.core.grammar.Grammar;
-import info.jonclark.treegraft.core.synccfg.SyncCFGGrammarLoader;
-import info.jonclark.treegraft.core.synccfg.SyncCFGRule;
-import info.jonclark.treegraft.core.synccfg.SyncCFGRuleFactory;
 import info.jonclark.treegraft.core.tokens.TokenFactory;
 import info.jonclark.treegraft.core.tokens.string.StringToken;
 import info.jonclark.treegraft.core.tokens.string.StringTokenFactory;
+import info.jonclark.treegraft.parsing.chartparser.Chart;
+import info.jonclark.treegraft.parsing.chartparser.ChartParser;
+import info.jonclark.treegraft.parsing.grammar.Grammar;
+import info.jonclark.treegraft.parsing.oov.DeleteOOVHandler;
+import info.jonclark.treegraft.parsing.synccfg.SyncCFGGrammarLoader;
+import info.jonclark.treegraft.parsing.synccfg.SyncCFGRule;
+import info.jonclark.treegraft.parsing.synccfg.SyncCFGRuleFactory;
 import info.jonclark.util.StringUtils;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.logging.Logger;
@@ -42,6 +44,7 @@ public class TaruTreeGraftDriver {
 		Scorer.modelFile = props.getPropertyString("scorer.modelFile");
 		LMFeatureFunction.lmFile = props.getPropertyString("lm.modelFile");
 
+		String grammarEncoding = props.getPropertyString("grammar.encoding"); // utf8
 		String[] filterLHS = props.getPropertyStringArray("grammar.filterRulesWithLHS");
 		String[] filterRHSNonterms =
 				props.getPropertyStringArray("grammar.filterRulesWithNonterminalRHS");
@@ -57,7 +60,7 @@ public class TaruTreeGraftDriver {
 
 		StringToken[] inputTokens = tokenFactory.makeTokens(StringUtils.tokenize(input), true);
 		HashSet<StringToken> vocabulary = new HashSet<StringToken>(Arrays.asList(inputTokens));
-		
+
 		// set up arbitrary rule filters
 		HashSet<StringToken> filterLHSToks =
 				new HashSet<StringToken>(Arrays.asList(tokenFactory.makeTokens(filterLHS, false)));
@@ -70,14 +73,19 @@ public class TaruTreeGraftDriver {
 		ProfilerTimer loadTimer = ProfilerTimer.newTimer("Loading", timer, true, true);
 		ProfilerTimer loadGrammarTimer =
 				ProfilerTimer.newTimer("loadGrammar", loadTimer, true, true);
+		SyncCFGGrammarLoader<StringToken> grammarLoader = new SyncCFGGrammarLoader<StringToken>(tokenFactory);
 		Grammar<SyncCFGRule<StringToken>, StringToken> grammar =
-				SyncCFGGrammarLoader.loadSyncGrammar(grammarFile, tokenFactory, vocabulary, filterLHSToks, filterRHSToks);
+				new Grammar<SyncCFGRule<StringToken>, StringToken>(tokenFactory,
+						Grammar.DEFAULT_START_SYMBOLS, vocabulary, filterLHSToks, filterRHSToks);
+		grammarLoader.loadGrammar(grammar, new FileInputStream(grammarFile), grammarFile.getAbsolutePath(), grammarEncoding);
+
 		loadGrammarTimer.pause();
 		loadTimer.pause();
 
 		log.info("Parsing...");
+		DeleteOOVHandler<StringToken> oovHandler = new DeleteOOVHandler<StringToken>(props, tokenFactory);
 		ChartParser<SyncCFGRule<StringToken>, StringToken> parser =
-				new ChartParser<SyncCFGRule<StringToken>, StringToken>(ruleFactory, grammar, timer);
+				new ChartParser<SyncCFGRule<StringToken>, StringToken>(ruleFactory, grammar, oovHandler, timer);
 		Chart<SyncCFGRule<StringToken>, StringToken> chart = parser.parse(inputTokens);
 		timer.pause();
 

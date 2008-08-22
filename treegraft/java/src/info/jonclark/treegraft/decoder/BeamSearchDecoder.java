@@ -1,16 +1,15 @@
 package info.jonclark.treegraft.decoder;
 
-import info.jonclark.treegraft.chartparser.Chart;
-import info.jonclark.treegraft.chartparser.Key;
 import info.jonclark.treegraft.core.forestunpacking.ForestUnpacker;
-import info.jonclark.treegraft.core.forestunpacking.parses.Parse;
-import info.jonclark.treegraft.core.rules.GrammarRule;
-import info.jonclark.treegraft.core.scoring.Scores;
+import info.jonclark.treegraft.core.merging.ParsePruner;
+import info.jonclark.treegraft.core.parses.Parse;
+import info.jonclark.treegraft.core.scoring.Scorer;
+import info.jonclark.treegraft.core.search.Beam;
 import info.jonclark.treegraft.core.tokens.Token;
 import info.jonclark.treegraft.core.tokens.TokenFactory;
-import info.jonclark.treegraft.core.tokens.TokenSequence;
-import info.jonclark.treegraft.lm.LanguageModel;
-import info.jonclark.treegraft.search.Beam;
+import info.jonclark.treegraft.parsing.chartparser.Chart;
+import info.jonclark.treegraft.parsing.chartparser.Key;
+import info.jonclark.treegraft.parsing.rules.GrammarRule;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,25 +17,49 @@ import java.util.List;
 public class BeamSearchDecoder<R extends GrammarRule<T>, T extends Token> {
 
 	private final TokenFactory<T> tokenFactory;
-	private final LanguageModel<T> lm;
+	private final Scorer<R, T> scorer;
+	private final ParsePruner<R, T> merger;
 
-	public BeamSearchDecoder(TokenFactory<T> tokenFactory, LanguageModel<T> lm) {
+	public BeamSearchDecoder(TokenFactory<T> tokenFactory, Scorer<R, T> scorer,
+			ParsePruner<R, T> merger) {
+		
 		this.tokenFactory = tokenFactory;
-		this.lm = lm;
+		this.scorer = scorer;
+		this.merger = merger;
 	}
 
-	public List<Hypothesis<T>> getKBest(Chart<R, T> chart, ForestUnpacker<R, T> unpacker, int k) {
+	public List<DecoderHypothesis<T>> getKBest(Chart<R, T> chart, ForestUnpacker<R, T> unpacker,
+			int k) {
 
 		// keep k-best translations for each non-terminal type and each span
 		// by walking up the hypergraph, bottom-up
 
 		final int N = chart.getInputLength();
-		Beam<Hypothesis<T>>[][] beams = new Beam[N + 1][N + 1];
+		Beam<DecoderHypothesis<T>>[][] beams = createEmptyBeams(k, N);
+		seedBeamsWithPartialParses(chart, unpacker, beams);
+
+		// TODO: Unknown word handling
+
+		// now that we've seeded our possible translations, start propagating
+		// possibilities up through the spans
+		decode(beams);
+
+		// return the hypotheses that cover the whole input
+		return beams[0][N];
+	}
+
+	private Beam<DecoderHypothesis<T>>[][] createEmptyBeams(int k, final int N) {
+		Beam<DecoderHypothesis<T>>[][] beams = new Beam[N + 1][N + 1];
 		for (int i = 0; i < beams.length; i++) {
 			for (int j = 0; j < beams[i].length; j++) {
-				beams[i][j] = new Beam<Hypothesis<T>>(k);
+				beams[i][j] = new Beam<DecoderHypothesis<T>>(k);
 			}
 		}
+		return beams;
+	}
+
+	private void seedBeamsWithPartialParses(Chart<R, T> chart, ForestUnpacker<R, T> unpacker,
+			Beam<DecoderHypothesis<T>>[][] beams) {
 
 		// for each source key, keep a beam of the best hypotheses that it can
 		// create each backpointer from higher-level keys will have access to
@@ -45,77 +68,60 @@ public class BeamSearchDecoder<R extends GrammarRule<T>, T extends Token> {
 			List<Parse<T>> partialParses = unpacker.getPartialParses(key);
 			for (Parse<T> parse : partialParses) {
 
+				ArrayList<Parse<T>> singleParseList = new ArrayList<Parse<T>>(1);
+				singleParseList.add(parse);
+
 				// create a hypothesis for each partial parse coming out of the
 				// transfer stage
-				Hypothesis<T> hyp = new Hypothesis<T>(parse);
+				DecoderHypothesis<T> hyp =
+						new DecoderHypothesis<T>(singleParseList, parse.getTargetTokens(),
+								parse.getScores());
 				beams[key.getStartIndex()][key.getEndIndex()].add(hyp);
 			}
 		}
+	}
 
-		// TODO: Unknown word handling
+	private void decode(Beam<DecoderHypothesis<T>>[][] beams) {
 
-		// now that we've seeded our possible translations, start propagating
-		// possibilities up through the spans
+		final int N = beams.length - 1;
 
-		// iterate over possible beams to output to
-		for (int outputStart = 0; outputStart < N; outputStart++) {
-			for (int outputEnd = outputStart + 1; outputEnd < N + 1; outputEnd++) {
+		// iterate over possible beams to output to and pairs of beams to read
+		// from
+		for (int hypothesisLength = 2; hypothesisLength < N + 1; hypothesisLength++) {
+			System.out.println("Creating hypotheses of length " + hypothesisLength);
+			for (int outputStart = 0; outputStart + hypothesisLength < N + 1; outputStart++) {
+				int outputEnd = outputStart + hypothesisLength;
+				for (int midpoint = outputStart + 1; midpoint < outputEnd; midpoint++) {
 
-				// now iterate over pairs of beams to read from
-				for (int input1Start = 0; input1Start < N; input1Start++) {
-					for (int input1End = input1Start + 1; input1End < N + 1; input1End++) {
+					int input1Start = outputStart, input1End = midpoint, input2Start = midpoint, input2End =
+							outputEnd;
 
-						for (int input2Start = input1End; input2Start < N; input2Start++) {
-							for (int input2End = input2Start + 1; input2End < N + 1; input2End++) {
+					// create a new output hypothesis by joining the
+					// 2 input hypotheses
+					Beam<DecoderHypothesis<T>> outputBeam = beams[outputStart][outputEnd];
+					Beam<DecoderHypothesis<T>> beam1 = beams[input1Start][input1End];
+					Beam<DecoderHypothesis<T>> beam2 = beams[input2Start][input2End];
 
-								// create a new output hypothesis by joining the
-								// 2 input hypotheses
-								Beam<Hypothesis<T>> outputBeam = beams[outputStart][outputEnd];
-								Beam<Hypothesis<T>> beam1 = beams[input1Start][input1End];
-								Beam<Hypothesis<T>> beam2 = beams[input2Start][input2End];
+					merger.combineCrossProductOfHypotheses(scorer, beam1, beam2, outputBeam);
 
-								// TODO: Apply cube pruning right here
-								for (Hypothesis<T> hyp1 : beam1) {
-									for (Hypothesis<T> hyp2 : beam2) {
-
-										Hypothesis<T> combinedHyp = concatenateHypotheses(hyp1, hyp2);
-										outputBeam.add(combinedHyp);
-									}
-								}
-							}
-						}
-					}
+					System.out.println("Combined (" + input1Start + ", " + input1End + ")["
+							+ beam1.currentSize() + " hypotheses] with (" + input2Start + ", "
+							+ input2End + ")[" + beam2.currentSize() + " hypotheses] into ("
+							+ outputStart + ", " + outputEnd + ")[" + outputBeam.currentSize()
+							+ " hypotheses]");
 				}
 			}
 		}
-
-		// return the hypotheses that cover the whole input
-		return beams[0][beams.length];
 	}
 
-	private Hypothesis<T> concatenateHypotheses(Hypothesis<T> hyp1, Hypothesis<T> hyp2) {
-		List<T> combinedTokens =
-				new ArrayList<T>(hyp1.getTokens().size()
-						+ hyp2.getTokens().size());
-		combinedTokens.addAll(hyp1.getTokens());
-		combinedTokens.addAll(hyp2.getTokens());
+	// TODO: Fix this completely screwed up method of combining LM scores
+	// TODO: Add fragmentation penalty
+	// TODO: Add length penalty
+	// TODO: Add bidirectional lexical scores
+	// TODO: Hypothesis recombination
 
-		// TODO: Fix this completely screwed up
-		// method of combining LM scores
-		// TODO: Add fragmentation penalty
-		// TODO: Add length penalty
-		// TODO: Add bidirectional lexical
-		// scores
-		TokenSequence<T> tokenSequence =
-				tokenFactory.makeTokenSequence(combinedTokens);
-		double lmScore = lm.score(tokenSequence);
-
-		Scores combinedScore =
-				new Scores(hyp1.getLogProb() + hyp2.getLogProb()
-						+ lmScore);
-
-		Hypothesis<T> combinedHyp =
-				new Hypothesis<T>(combinedTokens, combinedScore);
-		return combinedHyp;
-	}
+	// TODO: Where do we store this LM score along with the hypothesis?
+	// TODO: How do we fit the LM cleanly into this feature architecture?
+	// Can each feature in the FeatureScore object have its own meta-data
+	// component?
 }

@@ -1,5 +1,7 @@
 package info.jonclark.treegraft.core.tokens;
 
+import java.util.List;
+
 /**
  * Responsible for mapping input strings to unique tokens so that they can be
  * efficiently compared and hashed. Also, the SymbolFactory must ensure that the
@@ -45,7 +47,7 @@ public abstract class TokenFactory<T extends Token> {
 	 *            the tokens to be included in the sequence
 	 * @return a token sequence of the tokens in the given array
 	 */
-	public abstract TokenSequence<T> makeTokenSequence(T[] tokens);
+	public abstract TokenSequence<T> makeTokenSequence(List<T> tokens);
 
 	/**
 	 * Gets the original string representation of a <code>Token</code>.
@@ -79,6 +81,13 @@ public abstract class TokenFactory<T extends Token> {
 		String[] strs = new String[toks.length];
 		for (int i = 0; i < toks.length; i++)
 			strs[i] = getTokenAsString(toks[i]);
+		return strs;
+	}
+	
+	public String[] getTokensAsStrings(List<T> toks) {
+		String[] strs = new String[toks.size()];
+		for (int i = 0; i < toks.size(); i++)
+			strs[i] = getTokenAsString(toks.get(i));
 		return strs;
 	}
 
