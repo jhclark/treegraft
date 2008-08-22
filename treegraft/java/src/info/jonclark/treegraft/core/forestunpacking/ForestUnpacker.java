@@ -1,8 +1,7 @@
 package info.jonclark.treegraft.core.forestunpacking;
 
-import info.jonclark.treegraft.core.merging.ParsePruner;
+import info.jonclark.treegraft.core.merging.Merger;
 import info.jonclark.treegraft.core.parses.Parse;
-import info.jonclark.treegraft.core.recombination.ParseRecombiner;
 import info.jonclark.treegraft.core.scoring.FeatureScores;
 import info.jonclark.treegraft.core.scoring.Scorer;
 import info.jonclark.treegraft.core.tokens.Token;
@@ -17,18 +16,15 @@ import java.util.List;
 public class ForestUnpacker<R extends GrammarRule<T>, T extends Token> {
 
 	private final Scorer<R, T> scorer;
-	private final ParsePruner<R, T> pruner;
-	private final ParseRecombiner<R, T> recombiner;
+	private final Merger<R, T> pruner;
 	private final Transducer<R, T> transducer;
 
 	// TODO: Pass parses from the left to the parses being created on the right
 	// e.g. we can use these for language model context
-	public ForestUnpacker(Scorer<R, T> scorer, ParsePruner<R, T> pruner,
-			ParseRecombiner<R, T> recombiner, Transducer<R, T> transducer) {
+	public ForestUnpacker(Scorer<R, T> scorer, Merger<R, T> merger, Transducer<R, T> transducer) {
 
 		this.scorer = scorer;
-		this.pruner = pruner;
-		this.recombiner = recombiner;
+		this.pruner = merger;
 		this.transducer = transducer;
 	}
 
@@ -81,7 +77,6 @@ public class ForestUnpacker<R extends GrammarRule<T>, T extends Token> {
 
 				parsesFromBackpointer[targetRhsIndex] =
 						outputNonterminal(key, ruleToUnpack, sourceRhsIndex, backpointers);
-				recombiner.recombine(parsesFromBackpointer[targetRhsIndex], scorer);
 			}
 
 		}
