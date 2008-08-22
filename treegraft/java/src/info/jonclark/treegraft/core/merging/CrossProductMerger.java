@@ -1,4 +1,4 @@
-package info.jonclark.treegraft.core.mergingX;
+package info.jonclark.treegraft.core.merging;
 
 import info.jonclark.treegraft.core.parses.Parse;
 import info.jonclark.treegraft.core.scoring.FeatureScores;
@@ -12,10 +12,10 @@ import info.jonclark.treegraft.parsing.transduction.Transducer;
 import java.util.ArrayList;
 import java.util.List;
 
-public class CrossProductParsePruner<R extends GrammarRule<T>, T extends Token> implements
-		ParsePruner<R, T> {
+public class CrossProductMerger<R extends GrammarRule<T>, T extends Token> implements
+		Merger<R, T> {
 
-	public CrossProductParsePruner() {
+	public CrossProductMerger() {
 	}
 
 	public List<Parse<T>> combineCrossProductOfParses(R parentRule, List<Parse<T>>[] parses,

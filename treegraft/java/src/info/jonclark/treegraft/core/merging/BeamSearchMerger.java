@@ -1,4 +1,4 @@
-package info.jonclark.treegraft.core.mergingX;
+package info.jonclark.treegraft.core.merging;
 
 import info.jonclark.treegraft.core.parses.Parse;
 import info.jonclark.treegraft.core.scoring.FeatureScores;
@@ -15,21 +15,24 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-public class BeamSearchParsePruner<R extends GrammarRule<T>, T extends Token> implements
-		ParsePruner<R, T> {
+public class BeamSearchMerger<R extends GrammarRule<T>, T extends Token> implements Merger<R, T> {
 
 	private final TokenFactory<T> tokenFactory;
 	private final int beamSize;
+	private final boolean doParseYieldRecombination;
+	private final boolean doHypothesisRecombination;
 
-	public BeamSearchParsePruner(TokenFactory<T> tokenFactory, int beamSize) {
+	public BeamSearchMerger(TokenFactory<T> tokenFactory, int beamSize,
+			boolean doParseYieldRecombination, boolean doHypothesisRecombination) {
+
 		this.tokenFactory = tokenFactory;
 		this.beamSize = beamSize;
+		this.doParseYieldRecombination = doParseYieldRecombination;
+		this.doHypothesisRecombination = doHypothesisRecombination;
 	}
 
 	public List<Parse<T>> combineCrossProductOfParses(R parentRule, List<Parse<T>>[] parses,
 			Scorer<R, T> scorer, Transducer<R, T> transducer) {
-
-		// TODO: Move recombination here
 
 		List<Parse<T>> currentResultParses = new Beam<Parse<T>>(beamSize);
 		T sourceLhs = parentRule.getLhs();
@@ -61,16 +64,34 @@ public class BeamSearchParsePruner<R extends GrammarRule<T>, T extends Token> im
 
 		List<Parse<T>> combinedParses = new Beam<Parse<T>>(beamSize);
 
+		HashMap<TokenSequence<T>, Parse<T>> uniqueParses =
+				new HashMap<TokenSequence<T>, Parse<T>>();
+
 		for (Parse<T> parseFromBackpointer : rightParsesToBeCombined) {
 			for (Parse<T> resultParse : currentParsesToBeCombined) {
 
 				Parse<T> expandedParse = new Parse<T>(resultParse);
 				expandedParse.appendParse(sourceRhsIndex, targetRhsIndex, parseFromBackpointer);
 
-				FeatureScores newScores =
-						scorer.combineChildParseScores(parseFromBackpointer, resultParse);
-				expandedParse.setCurrentScore(newScores);
-				combinedParses.add(expandedParse);
+				TokenSequence<T> combinedSeq =
+						tokenFactory.makeTokenSequence(expandedParse.getTargetTokens());
+				Parse<T> previousParseWithSameYield = null;
+
+				if (doParseYieldRecombination)
+					previousParseWithSameYield = uniqueParses.get(combinedSeq);
+
+				if (previousParseWithSameYield == null) {
+
+					FeatureScores newScores =
+							scorer.combineChildParseScores(parseFromBackpointer, resultParse);
+					expandedParse.setCurrentScore(newScores);
+					combinedParses.add(expandedParse);
+
+					if (doParseYieldRecombination)
+						uniqueParses.put(combinedSeq, expandedParse);
+				} else {
+					previousParseWithSameYield.addRecombinedParse(expandedParse);
+				}
 			}
 		}
 
@@ -96,8 +117,10 @@ public class BeamSearchParsePruner<R extends GrammarRule<T>, T extends Token> im
 				TokenSequence<T> combinedTokenSequence =
 						tokenFactory.makeTokenSequence(combinedTokens);
 
-				DecoderHypothesis<T> previousHypothesisWithSameYield =
-						uniqueHypotheses.get(combinedTokenSequence);
+				DecoderHypothesis<T> previousHypothesisWithSameYield = null;
+
+				if (doHypothesisRecombination)
+					previousHypothesisWithSameYield = uniqueHypotheses.get(combinedTokenSequence);
 
 				if (previousHypothesisWithSameYield == null) {
 					FeatureScores combinedScore =
@@ -113,7 +136,9 @@ public class BeamSearchParsePruner<R extends GrammarRule<T>, T extends Token> im
 							new DecoderHypothesis<T>(parses, combinedTokens, combinedScore);
 
 					outputBeam.add(combinedHyp);
-					uniqueHypotheses.put(combinedTokenSequence, combinedHyp);
+
+					if (doHypothesisRecombination)
+						uniqueHypotheses.put(combinedTokenSequence, combinedHyp);
 				} else {
 
 					// if we actually make the new hypothesis and keep scoring
