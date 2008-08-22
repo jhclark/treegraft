@@ -11,15 +11,6 @@ public interface Feature<R extends GrammarRule<T>, T extends Token, S extends Fe
 
 	public S combineRuleScoreWithChildren(Parse<T> parse, S parseScore, R ruleToAppend);
 
-	/**
-	 * Assign a score to a Parse; this method also gives features the
-	 * opportunity to internally keep track of important information
-	 * 
-	 * @param seq
-	 * @return
-	 */
-	public S scoreParse(Parse<T> parse, TokenSequence<T> tokenSequence);
-
 	public S getInitialScore();
 
 	public S combineChildParseScores(Parse<T> accumulatedParse, TokenSequence<T> accumulatedSeq,

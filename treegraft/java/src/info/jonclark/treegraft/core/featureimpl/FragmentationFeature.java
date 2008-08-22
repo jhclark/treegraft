@@ -6,12 +6,12 @@ import info.jonclark.treegraft.core.tokens.TokenSequence;
 import info.jonclark.treegraft.parsing.parses.Parse;
 import info.jonclark.treegraft.parsing.rules.GrammarRule;
 
-public class FragmentationPenalty<R extends GrammarRule<T>, T extends Token> implements
+public class FragmentationFeature<R extends GrammarRule<T>, T extends Token> implements
 		Feature<R, T, FragmentationScore> {
 
 	private final double[] weights;
 
-	public FragmentationPenalty(double weight) {
+	public FragmentationFeature(double weight) {
 		this.weights = new double[] { weight };
 	}
 
@@ -42,10 +42,6 @@ public class FragmentationPenalty<R extends GrammarRule<T>, T extends Token> imp
 
 		// start with one piece
 		return new FragmentationScore(1);
-	}
-
-	public FragmentationScore scoreParse(Parse<T> parse, TokenSequence<T> tokenSequence) {
-		return getInitialScore();
 	}
 
 	public FragmentationScore scoreTerminalToken(T token) {

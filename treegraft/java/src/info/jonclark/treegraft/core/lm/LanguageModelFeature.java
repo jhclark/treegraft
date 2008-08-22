@@ -27,11 +27,6 @@ public class LanguageModelFeature<R extends GrammarRule<T>, T extends Token> imp
 		list.add(dummy);
 	}
 
-	public LanguageModelScore scoreParse(Parse<T> parse, TokenSequence<T> seq) {
-		LanguageModelScore lmScore = lm.scoreSequence(seq);
-		return lmScore;
-	}
-
 	public LanguageModelScore combineHypotheses(TokenSequence<T> tokensFromHyp1,
 			LanguageModelScore scoreFromHyp1, TokenSequence<T> tokensFromHyp2,
 			LanguageModelScore scoreFromHyp2, TokenSequence<T> combinedTokenSequence) {

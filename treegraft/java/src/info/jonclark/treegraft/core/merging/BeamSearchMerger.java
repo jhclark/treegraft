@@ -90,6 +90,8 @@ public class BeamSearchMerger<R extends GrammarRule<T>, T extends Token> impleme
 					if (doParseYieldRecombination)
 						uniqueParses.put(combinedSeq, expandedParse);
 				} else {
+					FeatureScores recombinedScores = scorer.recombineParses(previousParseWithSameYield, expandedParse);
+					previousParseWithSameYield.setCurrentScore(recombinedScores);
 					previousParseWithSameYield.addRecombinedParse(expandedParse);
 				}
 			}
