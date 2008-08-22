@@ -1,7 +1,7 @@
 package info.jonclark.treegraft.decoder;
 
 import info.jonclark.treegraft.core.forestunpacking.ForestUnpacker;
-import info.jonclark.treegraft.core.merging.ParsePruner;
+import info.jonclark.treegraft.core.merging.Merger;
 import info.jonclark.treegraft.core.parses.Parse;
 import info.jonclark.treegraft.core.scoring.Scorer;
 import info.jonclark.treegraft.core.search.Beam;
@@ -18,10 +18,10 @@ public class BeamSearchDecoder<R extends GrammarRule<T>, T extends Token> {
 
 	private final TokenFactory<T> tokenFactory;
 	private final Scorer<R, T> scorer;
-	private final ParsePruner<R, T> merger;
+	private final Merger<R, T> merger;
 
 	public BeamSearchDecoder(TokenFactory<T> tokenFactory, Scorer<R, T> scorer,
-			ParsePruner<R, T> merger) {
+			Merger<R, T> merger) {
 		
 		this.tokenFactory = tokenFactory;
 		this.scorer = scorer;
