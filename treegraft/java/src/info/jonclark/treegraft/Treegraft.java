@@ -8,11 +8,10 @@ import info.jonclark.treegraft.core.lm.ARPALanguageModelLoader;
 import info.jonclark.treegraft.core.lm.LanguageModel;
 import info.jonclark.treegraft.core.lm.LanguageModelFeature;
 import info.jonclark.treegraft.core.lm.NGramLanguageModel;
-import info.jonclark.treegraft.core.mergingX.BeamSearchParsePruner;
+import info.jonclark.treegraft.core.merging.BeamSearchMerger;
 import info.jonclark.treegraft.core.parses.BasicTreeFormatter;
 import info.jonclark.treegraft.core.parses.Parse;
 import info.jonclark.treegraft.core.parses.TreeFormatter;
-import info.jonclark.treegraft.core.recombination.YieldRecombiner;
 import info.jonclark.treegraft.core.scoring.Feature;
 import info.jonclark.treegraft.core.scoring.LogLinearScorer;
 import info.jonclark.treegraft.core.scoring.Scorer;
@@ -61,6 +60,10 @@ public class Treegraft<R extends GrammarRule<T>, T extends Token> {
 
 	protected final String[] sentences;
 	protected final Result<T>[] results;
+
+	private final boolean doYieldRecombination;
+
+	private final boolean doHypothesisRecombination;
 
 	public static class ReflectionException extends Exception {
 		private static final long serialVersionUID = 391200726464598307L;
@@ -183,6 +186,9 @@ public class Treegraft<R extends GrammarRule<T>, T extends Token> {
 		String lmEncoding = props.getPropertyString("lm.encoding");
 		double lmOOVLogProb = props.getPropertyFloat("lm.oovLogProb");
 		this.nBest = props.getPropertyInt("decoder.nBest");
+		
+		doYieldRecombination = props.getPropertyBoolean("parser.doYieldRecombination");
+		doHypothesisRecombination = props.getPropertyBoolean("decoder.doHypothesisRecombination");
 
 		String grammarEncoding = props.getPropertyString("grammar.encoding");
 		String[] startSymbols = props.getPropertyStringArray("grammar.startSymbols");
@@ -273,10 +279,11 @@ public class Treegraft<R extends GrammarRule<T>, T extends Token> {
 		Scorer<R, T> scorer = new LogLinearScorer<R, T>(features, tokenFactory);
 
 		// TODO: Separate beam sizes in the transfer stage and decoding stage
-		BeamSearchParsePruner<R, T> pruner = new BeamSearchParsePruner<R, T>(tokenFactory, nBest);
+		BeamSearchMerger<R, T> pruner =
+				new BeamSearchMerger<R, T>(tokenFactory, nBest, doYieldRecombination,
+						doHypothesisRecombination);
 		ForestUnpacker<R, T> unpacker =
-				new ForestUnpacker<R, T>(scorer, pruner, new YieldRecombiner<R, T>(tokenFactory),
-						ruleFactory.getTransducer());
+				new ForestUnpacker<R, T>(scorer, pruner, ruleFactory.getTransducer());
 
 		BeamSearchDecoder<R, T> decoder = new BeamSearchDecoder<R, T>(tokenFactory, scorer, pruner);
 		List<DecoderHypothesis<T>> nBestList = decoder.getKBest(chart, unpacker, nBest);
