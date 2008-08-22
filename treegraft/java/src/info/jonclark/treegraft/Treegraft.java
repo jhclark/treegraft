@@ -8,7 +8,7 @@ import info.jonclark.treegraft.core.lm.ARPALanguageModelLoader;
 import info.jonclark.treegraft.core.lm.LanguageModel;
 import info.jonclark.treegraft.core.lm.LanguageModelFeature;
 import info.jonclark.treegraft.core.lm.NGramLanguageModel;
-import info.jonclark.treegraft.core.merging.BeamSearchParsePruner;
+import info.jonclark.treegraft.core.mergingX.BeamSearchParsePruner;
 import info.jonclark.treegraft.core.parses.BasicTreeFormatter;
 import info.jonclark.treegraft.core.parses.Parse;
 import info.jonclark.treegraft.core.parses.TreeFormatter;
