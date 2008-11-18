@@ -34,9 +34,14 @@ public interface LanguageModel<T extends Token> {
 	 * @return
 	 */
 	public LanguageModelScore scoreBoundaryAndCombine(TokenSequence<T> seq1,
-			LanguageModelScore scores1, TokenSequence<T> seq2, LanguageModelScore scores2);
+			LanguageModelScore scores1, TokenSequence<T> seq2, LanguageModelScore scores2,
+			TokenSequence<T> combinedSequence);
 
 	public void setOrder(int n);
 
 	public void setOOVProb(double lobProb);
+	
+	public void setSentenceBeginMarker(TokenSequence<T> bos);
+	
+	public void setSentenceEndMarker(TokenSequence<T> eos);
 }
