@@ -25,7 +25,8 @@ public class ARPALanguageModelLoader<T extends Token> implements LanguageModelLo
 
 		TokenSequence<T> bos =
 				tokenFactory.makeTokenSequence(Arrays.asList(tokenFactory.makeToken("<s>", true)));
-		TokenSequence<T> eos = tokenFactory.makeTokenSequence(Arrays.asList(tokenFactory.makeToken("</s>", true)));
+		TokenSequence<T> eos =
+				tokenFactory.makeTokenSequence(Arrays.asList(tokenFactory.makeToken("</s>", true)));
 		lm.setSentenceBeginMarker(bos);
 		lm.setSentenceEndMarker(eos);
 
@@ -44,11 +45,13 @@ public class ARPALanguageModelLoader<T extends Token> implements LanguageModelLo
 
 		T unk = tokenFactory.makeToken("<unk>", true);
 
+		boolean inData = false;
 		String line;
 		while ((line = in.readLine()) != null) {
 
 			line = line.trim();
 			if (line.equals("\\data\\")) {
+				inData = true;
 
 				line = in.readLine().trim();
 
@@ -60,11 +63,15 @@ public class ARPALanguageModelLoader<T extends Token> implements LanguageModelLo
 					line = in.readLine();
 				}
 
-				lm.setOrder(ngramEntries.size());
+				int[] entries = new int[ngramEntries.size()];
+				for (int i = 0; i < entries.length; i++) {
+					entries[i] = ngramEntries.get(i);
+				}
+				lm.setOrder(ngramEntries.size(), entries);
 				if (task != null)
 					task.beginTask(expectedEntries);
 
-			} else if (line.startsWith("\\") && line.endsWith("-grams:")) {
+			} else if (inData && line.startsWith("\\") && line.endsWith("-grams:")) {
 				filePosition++;
 				int numEntriesForN = ngramEntries.get(filePosition - 1);
 
