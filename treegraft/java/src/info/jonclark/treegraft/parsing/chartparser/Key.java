@@ -2,6 +2,7 @@ package info.jonclark.treegraft.parsing.chartparser;
 
 import info.jonclark.log.LogUtils;
 import info.jonclark.treegraft.core.tokens.Token;
+import info.jonclark.treegraft.parsing.parses.Parse;
 import info.jonclark.treegraft.parsing.rules.GrammarRule;
 
 import java.util.ArrayList;
@@ -30,6 +31,7 @@ public class Key<R extends GrammarRule<T>, T extends Token> {
 	private final ActiveArc<R, T> firstArc;
 	private final T word;
 	private final int hashCode;
+	private List<Parse<T>> cache;
 
 	// private double maxLogProb;
 
@@ -224,7 +226,15 @@ public class Key<R extends GrammarRule<T>, T extends Token> {
 		return false;
 	}
 
-	/**
+	public List<Parse<T>> getTransducedParseCache() {
+		return cache;
+	}
+
+	public void setTransducedParseCache(List<Parse<T>> cache) {
+		this.cache = cache;
+	}
+
+	/*
 	 * Gets a string representation of this <code>Key</code> including the rule
 	 * or terminal symbol that lead to its creation, the source-side indices
 	 * that it covers, and information from the <code>ActiveArc</code> that

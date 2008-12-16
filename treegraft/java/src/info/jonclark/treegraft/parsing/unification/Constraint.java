@@ -2,8 +2,6 @@ package info.jonclark.treegraft.parsing.unification;
 
 import info.jonclark.treegraft.parsing.rules.GrammarRule;
 
-import java.io.File;
-
 public class Constraint {
 
 	// what it means...

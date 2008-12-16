@@ -2,6 +2,10 @@ package info.jonclark.treegraft.core.scoring;
 
 // FEATURE SCORES MUST BE IMMUTABLE!!!
 // IS THERE ANY WAY TO REMOVE THIS REQUIREMENT???
+/**
+ * Treegraft FeatureScores are stateful.
+ * 
+ */
 public interface FeatureScore {
 
 	/**

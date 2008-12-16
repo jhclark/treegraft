@@ -45,10 +45,16 @@ public class Chart<R extends GrammarRule<T>, T extends Token> {
 	private final ArrayList<Key<R, T>> parses = new ArrayList<Key<R, T>>();
 	private final ArrayList<Key<R, T>> keys = new ArrayList<Key<R, T>>(DEFAULT_CHART_SIZE);
 	private final int inputSize;
+	private final List<T> sourceInputTokens;
 
-	public Chart(int inputSize) {
+	public Chart(List<T> sourceInputTokens) {
+		this.inputSize = sourceInputTokens.size();
+		this.sourceInputTokens = sourceInputTokens;
 		existingKeys = new HashMap[inputSize + 1][inputSize + 1];
-		this.inputSize = inputSize;
+	}
+	
+	public List<T> getSourceInputTokens() {
+		return sourceInputTokens;
 	}
 
 	/**

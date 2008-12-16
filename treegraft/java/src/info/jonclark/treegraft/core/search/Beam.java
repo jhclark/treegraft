@@ -31,6 +31,19 @@ public class Beam<H extends Scored> implements Iterable<H>, List<H> {
 		this.beamSize = beamSize;
 	}
 
+	public Beam(List<H> other, int beamSize) {
+
+		this.beamSize = beamSize;
+		this.hypotheses = new ArrayList<H>(beamSize);
+
+		if (other instanceof Beam) {
+			Beam<H> otherBeam = (Beam<H>) other;
+			this.hypotheses.addAll(otherBeam.hypotheses);
+		} else {
+			this.addAll(other);
+		}
+	}
+
 	/**
 	 * Adds an item to the beam. If this item's score is the same as a previous
 	 * item, the previous item is overwritten
@@ -45,10 +58,16 @@ public class Beam<H extends Scored> implements Iterable<H>, List<H> {
 			// TODO: Reimplement this to make it faster since it's time critical
 			// code
 
+			// sort beam in ascending order
+			// best hyp is at index n
+			// worst is at index 0
+
 			// search for insertion point using hacked up comparator that uses a
 			// null key since we know the implementation detail that the binary
 			// search always passes the score as the second argument to the
 			// comparator
+			// i.e. the second argument of binarySearch() would be passed in as
+			// nulll in the comparator every time
 			int index = Collections.binarySearch(hypotheses, null, new Comparator<H>() {
 				public int compare(H hypFromList, H nulll) {
 					if (score > hypFromList.getLogProb()) {
@@ -60,7 +79,9 @@ public class Beam<H extends Scored> implements Iterable<H>, List<H> {
 					}
 				}
 			});
-			index = Math.abs(index);
+			if (index < 0) {
+				index = -(index + 1);
+			}
 
 			// let worst item fall out of the beam, if needed
 			if (hypotheses.size() == beamSize) {
@@ -205,5 +226,13 @@ public class Beam<H extends Scored> implements Iterable<H>, List<H> {
 
 	public <T> T[] toArray(T[] a) {
 		return hypotheses.toArray(a);
+	}
+	
+	public String toString() {
+		StringBuilder builder = new StringBuilder();
+		for(int i=hypotheses.size()-1; i >=0 ; i--) {
+			builder.append((hypotheses.size()-i) + ") " + hypotheses.get(i) + "\n");
+		}
+		return builder.toString();
 	}
 }

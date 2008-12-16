@@ -1,5 +1,6 @@
 package info.jonclark.treegraft.parsing.rules;
 
+import info.jonclark.treegraft.core.featureimpl.RuleScore;
 import info.jonclark.treegraft.core.tokens.Token;
 import info.jonclark.treegraft.core.tokens.TokenSequence;
 import info.jonclark.treegraft.parsing.synccfg.SyncCFGRule;
@@ -73,7 +74,7 @@ public interface GrammarRule<T extends Token> {
 	 * 
 	 * @return a log probability
 	 */
-	public double getLogProb();
+	public RuleScore getRuleScores();
 
 	/**
 	 * Get the File in which this GrammarRule was defined.

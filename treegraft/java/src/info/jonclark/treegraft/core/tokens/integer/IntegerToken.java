@@ -57,4 +57,12 @@ public class IntegerToken implements Token {
 		return getId();
 	}
 
+	public int compareTo(Token other) {
+		if(other instanceof IntegerToken) {
+			return this.id - ((IntegerToken)other).id;
+		} else {
+			return -1;
+		}
+	}
+
 }

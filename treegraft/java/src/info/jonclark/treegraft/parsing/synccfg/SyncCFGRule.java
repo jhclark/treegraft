@@ -1,7 +1,7 @@
 package info.jonclark.treegraft.parsing.synccfg;
 
 import info.jonclark.stat.SecondTimer;
-import info.jonclark.treegraft.core.scoring.ProbUtils;
+import info.jonclark.treegraft.core.featureimpl.RuleScore;
 import info.jonclark.treegraft.core.tokens.Token;
 import info.jonclark.treegraft.core.tokens.TokenFactory;
 import info.jonclark.treegraft.core.tokens.TokenSequence;
@@ -30,13 +30,15 @@ public class SyncCFGRule<T extends Token> implements GrammarRule<T> {
 
 	private int keysCreated = 0;
 
-	private final TokenSequence<T> packingString;
+	private TokenSequence<T> packingString;
 
-	private final int[] sourceToTargetAlignment;
-	private final int[] targetToSourceAlignment;
-	private final double logProb;
+	private int[] sourceToTargetAlignment;
+	private int[] targetToSourceAlignment;
+	private final RuleScore score;
 
 	private final String ruleId;
+	
+//	public String originalString;
 
 //	 private final File file;
 //	 private final int lineNumber;
@@ -63,19 +65,25 @@ public class SyncCFGRule<T extends Token> implements GrammarRule<T> {
 	 * @throws RuleException
 	 */
 	public SyncCFGRule(T lhs, T[] rhs, T targetLhs, T[] targetRhs, String ruleId,
-			int[] targetToSourceAlignment, double prob, Constraint[] constraints, String file,
+			int[] targetToSourceAlignment, RuleScore ruleScores, Constraint[] constraints, String file,
 			int lineNumber, TokenFactory<T> tokenFactory) throws RuleException {
 
+//		this.originalString = originalString;
+		
 		this.lhs = lhs;
 		this.rhs = rhs;
 		this.targetLhs = targetLhs;
 		this.targetRhs = targetRhs;
 		this.ruleId = ruleId;
 		this.targetToSourceAlignment = targetToSourceAlignment;
-		this.logProb = ProbUtils.logProb(prob);
+		this.score = ruleScores;
 
 		this.packingString = MonoCFGRule.makePackingString(lhs, rhs, tokenFactory);
+		precomputeAlignment(rhs, targetRhs, targetToSourceAlignment);
+	}
 
+	private void precomputeAlignment(T[] rhs, T[] targetRhs, int[] targetToSourceAlignment)
+			throws RuleException {
 		// invert the alignments
 		this.sourceToTargetAlignment = new int[rhs.length];
 		for (int i = 0; i < sourceToTargetAlignment.length; i++) {
@@ -125,9 +133,6 @@ public class SyncCFGRule<T extends Token> implements GrammarRule<T> {
 				}
 			}
 		}
-
-		// this.file = file;
-		// this.lineNumber = lineNumber;
 	}
 
 	/**
@@ -221,8 +226,8 @@ public class SyncCFGRule<T extends Token> implements GrammarRule<T> {
 	/**
 	 * {@inheritDoc}
 	 */
-	public double getLogProb() {
-		return logProb;
+	public RuleScore getRuleScores() {
+		return score;
 	}
 
 	/**
@@ -329,7 +334,7 @@ public class SyncCFGRule<T extends Token> implements GrammarRule<T> {
 				+
 				// "@" + file.getName() + ":" + lineNumber +
 				" = " + lhs + "::" + targetLhs + " : [ " + StringUtils.untokenize(rhs) + " ] -> [ "
-				+ StringUtils.untokenize(targetRhs) + " ]";
+				+ StringUtils.untokenize(targetRhs) + " ] " + this.score.toString();
 	}
 
 	public int getKeysCreated() {

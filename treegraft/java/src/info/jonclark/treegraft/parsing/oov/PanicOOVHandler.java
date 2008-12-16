@@ -6,6 +6,7 @@ import info.jonclark.treegraft.core.tokens.TokenFactory;
 import info.jonclark.treegraft.parsing.rules.GrammarRule;
 import info.jonclark.treegraft.parsing.rules.RuleException;
 
+import java.util.HashSet;
 import java.util.List;
 
 public class PanicOOVHandler<R extends GrammarRule<T>, T extends Token> implements
@@ -22,6 +23,10 @@ public class PanicOOVHandler<R extends GrammarRule<T>, T extends Token> implemen
 
 		throw new RuntimeException("Encountered unexpected OOV word: "
 				+ tokenFactory.getTokenAsString(sourceOovTerminal));
+	}
+
+	public HashSet<T> getAdditionalTargetVocabulary(HashSet<T> sourceVocab) {
+		return new HashSet<T>(0);
 	}
 
 }

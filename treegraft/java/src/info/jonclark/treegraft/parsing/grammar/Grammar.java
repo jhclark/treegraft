@@ -29,13 +29,12 @@ import java.util.logging.Logger;
  */
 public class Grammar<R extends GrammarRule<T>, T extends Token> {
 
-	public static final double DEFAULT_RULE_SCORE = 1.0;
 	public static final String[] DEFAULT_START_SYMBOLS = { "S" };
 
 	private static final Logger log = LogUtils.getLogger();
 
 	private final List<R> emptyRuleList = Collections.EMPTY_LIST;
-	private HashMap<T, ArrayList<R>> rules = new HashMap<T, ArrayList<R>>();
+	private HashMap<T, ArrayList<R>> nonterminalInitialRules = new HashMap<T, ArrayList<R>>();
 	private HashMap<T, ArrayList<R>> terminalInitialRules = new HashMap<T, ArrayList<R>>();
 	private ArrayList<R> allRules = new ArrayList<R>();
 	private HashSet<T> startSymbols = new HashSet<T>();
@@ -93,7 +92,8 @@ public class Grammar<R extends GrammarRule<T>, T extends Token> {
 		Grammar<R, T> filteredGrammar = new Grammar<R, T>();
 		filteredGrammar.startSymbols = this.startSymbols;
 
-		filterSet(vocabulary, filteredGrammar, this.rules, filteredGrammar.rules);
+		filterSet(vocabulary, filteredGrammar, this.nonterminalInitialRules,
+				filteredGrammar.nonterminalInitialRules);
 		filterSet(vocabulary, filteredGrammar, this.terminalInitialRules,
 				filteredGrammar.terminalInitialRules);
 
@@ -115,6 +115,67 @@ public class Grammar<R extends GrammarRule<T>, T extends Token> {
 				}
 			}
 		}
+	}
+
+	public Grammar<R, T> keepKBestRules(int k) {
+
+		// declare 2 rules equal if their source LHS
+		// and source RHS are equal
+		Comparator<R> category = new Comparator<R>() {
+			public int compare(R o1, R o2) {
+				// int eq = o1.getLhs().compareTo(o2.getLhs());
+				// if (eq != 0) {
+				// return eq;
+				// }
+				if (o1.getRhs().length < o2.getRhs().length) {
+					return -1;
+				} else if (o1.getRhs().length > o2.getRhs().length) {
+					return 1;
+				}
+
+				for (int i = 0; i < o1.getRhs().length; i++) {
+					int eq = o1.getRhs()[i].compareTo(o2.getRhs()[i]);
+					if (eq != 0) {
+						return eq;
+					}
+				}
+				return 0;
+			}
+		};
+		Comparator<R> ranker = new Comparator<R>() {
+			public int compare(R o1, R o2) {
+				double s1 = o1.getRuleScores().sgt * o1.getRuleScores().tgs;
+				double s2 = o2.getRuleScores().sgt * o2.getRuleScores().tgs;
+				return (int) (s1 - s2);
+			}
+		};
+		return keepKBestRules(k, category, ranker);
+	}
+
+	public Grammar<R, T> keepKBestRules(int k, Comparator<R> categoryComparator,
+			Comparator<R> ranker) {
+
+		Collections.sort(allRules, categoryComparator);
+
+		Grammar<R, T> newGrammar = new Grammar<R, T>();
+		for (int i = 0; i < allRules.size();) {
+			R firstRule = allRules.get(i);
+			int j = i;
+			do {
+				j++;
+			} while (j < allRules.size()
+					&& categoryComparator.compare(firstRule, allRules.get(j)) == 0);
+
+			List<R> ruleGroup = allRules.subList(i, j);
+			Collections.sort(ruleGroup, ranker);
+			for (int x = 0; x < k && x < ruleGroup.size(); x++) {
+				R r = ruleGroup.get(x);
+				boolean lexicalInitial = r.getRhs()[0].isTerminal();
+				newGrammar.addRule(r, lexicalInitial);
+			}
+			i = j;
+		}
+		return newGrammar;
 	}
 
 	private boolean ruleIsInVocabulary(HashSet<T> vocabulary, R rule) {
@@ -162,29 +223,29 @@ public class Grammar<R extends GrammarRule<T>, T extends Token> {
 	public void addRule(R rule, boolean terminalInitial) {
 
 		if (vocabulary == null || ruleIsInVocabulary(vocabulary, rule)) {
-
 			if (terminalInitial) {
-				ArrayList<R> existingRules = terminalInitialRules.get(rule.getRhs()[0]);
-				if (existingRules == null) {
-					existingRules = new ArrayList<R>();
-					terminalInitialRules.put(rule.getRhs()[0], existingRules);
-				}
-				existingRules.add(rule);
-				allRules.add(rule);
+				putRule(rule, terminalInitialRules);
 			} else {
-				ArrayList<R> existingRules = rules.get(rule.getRhs()[0]);
-				if (existingRules == null) {
-					existingRules = new ArrayList<R>();
-					rules.put(rule.getRhs()[0], existingRules);
-				}
-				existingRules.add(rule);
-				allRules.add(rule);
+				putRule(rule, nonterminalInitialRules);
 			}
 		}
 
 		nCandidates++;
 		if (nCandidates % 100000 == 0)
-			log.info("Read " + nCandidates + " so far and kept " + getAllRules().size() + "...");
+			log.fine("Read " + nCandidates + " so far and kept " + getAllRules().size() + "...");
+	}
+
+	private void putRule(R rule, HashMap<T, ArrayList<R>> ruleMap) {
+		ArrayList<R> existingRules = ruleMap.get(rule.getRhs()[0]);
+		if (existingRules == null) {
+			existingRules = new ArrayList<R>();
+			ruleMap.put(rule.getRhs()[0], existingRules);
+		}
+		existingRules.add(rule);
+		allRules.add(rule);
+		
+//		System.out.println("Loading rule: " + rule.toString() + " TO " + rule.getRhs()[0]);
+//		System.out.println(ruleMap.toString());
 	}
 
 	/**
@@ -218,6 +279,9 @@ public class Grammar<R extends GrammarRule<T>, T extends Token> {
 	 */
 	public List<R> getTerminalInitialRules(T word) {
 		List<R> rules = this.terminalInitialRules.get(word);
+//		System.out.println(terminalInitialRules.toString());
+//		System.out.println(word.toString());
+//		System.out.println("RULES: " + rules);
 		if (rules == null) {
 			return emptyRuleList;
 		} else {
@@ -234,7 +298,7 @@ public class Grammar<R extends GrammarRule<T>, T extends Token> {
 	 */
 	public List<R> getRulesStartingWith(Key<R, T> key) {
 		// if (useTopDownPredictions) {}
-		List<R> result = rules.get(key.getLhs());
+		List<R> result = nonterminalInitialRules.get(key.getLhs());
 		if (result == null) {
 			return emptyRuleList;
 		} else {

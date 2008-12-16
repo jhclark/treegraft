@@ -13,7 +13,7 @@ package info.jonclark.treegraft.core.tokens;
  * 
  * @author Jonathan Clark
  */
-public interface Token {
+public interface Token extends Comparable<Token> {
 	
 	/**
 	 * Gets the unique identifier of this token, which could be anything from a
@@ -34,6 +34,11 @@ public interface Token {
 	 * {@inheritDoc}
 	 */
 	public int hashCode();
+	
+	/**
+	 * {@inheritDoc}
+	 */
+	public int compareTo(Token other);
 
 	/**
 	 * Distinguishes non-terminals from terminals in CFG rules.

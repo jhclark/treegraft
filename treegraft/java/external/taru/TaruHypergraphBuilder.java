@@ -9,7 +9,6 @@ import info.jonclark.treegraft.parsing.chartparser.Key;
 import info.jonclark.treegraft.parsing.forestunpacking.ParseForestFormatter;
 import info.jonclark.treegraft.parsing.synccfg.SyncCFGRule;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 

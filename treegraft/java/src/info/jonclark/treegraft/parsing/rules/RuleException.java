@@ -7,4 +7,8 @@ public class RuleException extends Exception {
 	public RuleException(String str) {
 		super(str);
 	}
+
+	public RuleException(String str, Throwable cause) {
+		super(str, cause);
+	}
 }

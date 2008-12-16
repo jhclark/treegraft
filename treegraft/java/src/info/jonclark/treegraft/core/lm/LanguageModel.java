@@ -37,7 +37,7 @@ public interface LanguageModel<T extends Token> {
 			LanguageModelScore scores1, TokenSequence<T> seq2, LanguageModelScore scores2,
 			TokenSequence<T> combinedSequence);
 
-	public void setOrder(int n);
+	public void setOrder(int n, int[] expectedItems);
 
 	public void setOOVProb(double lobProb);
 	

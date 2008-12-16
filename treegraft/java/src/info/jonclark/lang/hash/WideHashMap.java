@@ -40,19 +40,29 @@ public class WideHashMap {
 		h ^= (h >>> 20) ^ (h >>> 12);
 		h ^= (h >>> 7) ^ (h >>> 4);
 
+		// take the absolute value
+		h = (h < 0) ? -h : h;
+
 		return h;
 	}
 
 	public void put(long keyPart1, long keyPart2, float value1, float value2) {
 
-		int bucket = hash(keyPart1, keyPart2) % keys.length;
+		int hash = hash(keyPart1, keyPart2);
+		int inBoundsHash = hash % keys.length;
 
 		// make sure we start on an even boundary
-		bucket &= 0xFFFFFFFE;
+		int firstBucket = inBoundsHash & 0xFFFFFFFE;
 
 		// do linear probing, skipping over wide entries (pairs of positions)
+		int bucket = firstBucket;
 		while (occupied[bucket]) {
 			bucket += 2;
+			bucket %= keys.length;
+			if (bucket == firstBucket) {
+				throw new RuntimeException(
+						"Table full. User did not correctly predict number of entries.");
+			}
 		}
 
 		occupied[bucket] = true;

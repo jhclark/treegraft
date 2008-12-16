@@ -118,7 +118,7 @@ public class ActiveArcManager<R extends GrammarRule<T>, T extends Token> {
 		if (DO_AMBIGUITY_PACKING) {
 			T nextNeed = null;
 			if (lexicalRule.getRhs().length > 1) {
-				nextNeed = lexicalRule.getRhs()[0];
+				nextNeed = lexicalRule.getRhs()[1];
 			}
 			ruleArc = getPackedArc(i, i + 1, nextNeed, lexicalRule.getArcPackingString());
 		}

@@ -1,9 +1,17 @@
 package info.jonclark.treegraft.parsing.morphology;
 
-import java.net.InetSocketAddress;
+import info.jonclark.treegraft.core.tokens.Token;
 
-public class RemoteMorphologyGenerator implements MorphologyGenerator {
+import java.net.InetSocketAddress;
+import java.util.HashSet;
+
+public class RemoteMorphologyGenerator<T extends Token> implements MorphologyGenerator<T> {
+
 	public RemoteMorphologyGenerator(InetSocketAddress host) {
-		
+
+	}
+
+	public HashSet<T> getAdditionalTargetVocabulary(HashSet<T> grammarVocabulary) {
+		throw new Error("Unimplemented.");
 	}
 }

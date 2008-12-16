@@ -1,18 +1,20 @@
 package info.jonclark.treegraft.parsing.oov;
 
 import info.jonclark.properties.SmartProperties;
+import info.jonclark.treegraft.core.featureimpl.RuleScore;
 import info.jonclark.treegraft.core.tokens.Token;
 import info.jonclark.treegraft.core.tokens.TokenFactory;
 import info.jonclark.treegraft.parsing.rules.RuleException;
 import info.jonclark.treegraft.parsing.synccfg.SyncCFGRule;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 
 public class InsertOOVHandler<T extends Token> implements OutOfVocabularyHandler<SyncCFGRule<T>, T> {
 
 	private final TokenFactory<T> tokenFactory;
-	private final double oovRuleLogProb;
+	private final RuleScore oovRuleScore;
 	private final T[] oovRuleLhsList;
 	private final int[] alignment;
 	private final T[] phraseToInsert;
@@ -24,7 +26,9 @@ public class InsertOOVHandler<T extends Token> implements OutOfVocabularyHandler
 
 		this.alignment = new int[] { -1 };
 
-		this.oovRuleLogProb = props.getPropertyFloat("grammar.oovHandler.oovRuleLogProb");
+		double sgt = props.getPropertyFloat("grammar.oovHandler.oovRuleSgtLogProb");
+		double tgs = props.getPropertyFloat("grammar.oovHandler.oovRuleTgsLogProb");
+		this.oovRuleScore = new RuleScore(sgt, tgs);
 		this.oovRuleLhsList =
 				tokenFactory.makeTokens(
 						props.getPropertyStringArray("grammar.oovHandler.oovRuleLhsList"), true);
@@ -44,11 +48,19 @@ public class InsertOOVHandler<T extends Token> implements OutOfVocabularyHandler
 		for (T oovRuleLhs : oovRuleLhsList) {
 			SyncCFGRule<T> rule =
 					new SyncCFGRule<T>(oovRuleLhs, copyRhs, oovRuleLhs, phraseToInsert, "OOV"
-							+ oovCounter, alignment, oovRuleLogProb, null, "none", 0, tokenFactory);
+							+ oovCounter, alignment, oovRuleScore, null, "none", 0, tokenFactory);
 			rules.add(rule);
 			oovCounter++;
 		}
 		return rules;
+	}
+
+	public HashSet<T> getAdditionalTargetVocabulary(HashSet<T> sourceVocab) {
+		HashSet<T> additionalVocab = new HashSet<T>();
+		for (T t : phraseToInsert) {
+			additionalVocab.add(t);
+		}
+		return additionalVocab;
 	}
 
 }

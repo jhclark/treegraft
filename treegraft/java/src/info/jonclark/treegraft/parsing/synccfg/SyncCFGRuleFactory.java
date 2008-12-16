@@ -1,8 +1,8 @@
 package info.jonclark.treegraft.parsing.synccfg;
 
+import info.jonclark.treegraft.core.featureimpl.RuleScore;
 import info.jonclark.treegraft.core.tokens.Token;
 import info.jonclark.treegraft.core.tokens.TokenFactory;
-import info.jonclark.treegraft.parsing.grammar.Grammar;
 import info.jonclark.treegraft.parsing.rules.RuleException;
 import info.jonclark.treegraft.parsing.rules.RuleFactory;
 import info.jonclark.treegraft.parsing.transduction.Transducer;
@@ -37,7 +37,7 @@ public class SyncCFGRuleFactory<T extends Token> implements RuleFactory<SyncCFGR
 	public SyncCFGRule<T> makeDummyRule(T token) {
 		try {
 			return new SyncCFGRule<T>(token, (T[]) new Token[] { token }, null, null, null,
-					new int[1], Grammar.DEFAULT_RULE_SCORE, new Constraint[0], "none", 0,
+					new int[1], RuleScore.DEFAULT_RULE_SCORE, new Constraint[0], "none", 0,
 					tokenFactory);
 		} catch (RuleException e) {
 			throw new RuntimeException(e);

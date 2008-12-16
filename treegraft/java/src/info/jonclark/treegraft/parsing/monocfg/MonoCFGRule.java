@@ -1,6 +1,7 @@
 package info.jonclark.treegraft.parsing.monocfg;
 
 import info.jonclark.stat.SecondTimer;
+import info.jonclark.treegraft.core.featureimpl.RuleScore;
 import info.jonclark.treegraft.core.tokens.Token;
 import info.jonclark.treegraft.core.tokens.TokenFactory;
 import info.jonclark.treegraft.core.tokens.TokenSequence;
@@ -8,7 +9,6 @@ import info.jonclark.treegraft.parsing.rules.GrammarRule;
 import info.jonclark.treegraft.parsing.unification.Constraint;
 import info.jonclark.util.StringUtils;
 
-import java.io.File;
 import java.util.ArrayList;
 
 /**
@@ -29,8 +29,6 @@ public class MonoCFGRule<T extends Token> implements GrammarRule<T> {
 	private final TokenSequence<T> packingString;
 
 	private final String id;
-	private final File file;
-	private final int lineNumber;
 
 	private int keysCreated = 0;
 
@@ -56,13 +54,10 @@ public class MonoCFGRule<T extends Token> implements GrammarRule<T> {
 	 *            the line number of the grammar file on which this GrammarRule
 	 *            was defined
 	 */
-	public MonoCFGRule(T lhs, T[] rhs, Constraint[] constraints, String id, File file,
-			int lineNumber, TokenFactory<T> tokenFactory) {
+	public MonoCFGRule(T lhs, T[] rhs, Constraint[] constraints, String id, TokenFactory<T> tokenFactory) {
 		this.lhs = lhs;
 		this.rhs = rhs;
-		this.file = file;
 		this.id = id;
-		this.lineNumber = lineNumber;
 		this.constraints = constraints;
 		this.packingString = makePackingString(lhs, rhs, tokenFactory);
 	}
@@ -134,22 +129,8 @@ public class MonoCFGRule<T extends Token> implements GrammarRule<T> {
 	/**
 	 * {@inheritDoc}
 	 */
-	public File getFileAndLine() {
-		return file;
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	public int getLineNumber() {
-		return lineNumber;
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	public double getLogProb() {
-		return 1.0;
+	public RuleScore getRuleScores() {
+		return new RuleScore(0.0, 0.0);
 	}
 
 	/**

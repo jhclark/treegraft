@@ -5,7 +5,7 @@ import info.jonclark.treegraft.parsing.parses.Parse;
 import info.jonclark.treegraft.parsing.parses.TreeFormatter;
 
 public class LatticeArc<T extends Token> {
-	
+
 	private int startIndex;
 	private int endIndex;
 	private Parse<T> parse;
@@ -29,7 +29,7 @@ public class LatticeArc<T extends Token> {
 	}
 
 	public String toString(TreeFormatter<T> formatter) {
-		return "(" + startIndex + " " + endIndex + " " + parse.getLogProb() + " "
-				+ parse.getTargetTree().toString(formatter) + ")";
+		return "(" + startIndex + " " + endIndex + " " + parse.getSourceTree().toString(formatter)
+				+ " " + parse.getTargetTree().toString(formatter) + ")";
 	}
 }

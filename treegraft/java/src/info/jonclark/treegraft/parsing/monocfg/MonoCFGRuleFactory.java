@@ -36,7 +36,7 @@ public class MonoCFGRuleFactory<T extends Token> implements RuleFactory<MonoCFGR
 	 */
 	public MonoCFGRule<T> makeDummyRule(T token) {
 		return new MonoCFGRule<T>(token, (T[]) new Token[] { token }, new Constraint[0], "DUMMY",
-				new File("null"), 0, tokenFactory);
+				tokenFactory);
 	}
 
 	public Transducer<MonoCFGRule<T>, T> getTransducer() {

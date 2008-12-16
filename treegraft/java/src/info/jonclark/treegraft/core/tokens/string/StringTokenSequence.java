@@ -58,7 +58,7 @@ public class StringTokenSequence implements TokenSequence<StringToken> {
 	/**
 	 * {@inheritDoc}
 	 */
-	public int length() {
+	public int size() {
 		return tokens.size();
 	}
 
@@ -83,13 +83,38 @@ public class StringTokenSequence implements TokenSequence<StringToken> {
 		}
 	}
 
-	public TokenSequence<StringToken> prepend(TokenSequence<StringToken> seq) {
+	public TokenSequence<StringToken> prepend(TokenSequence<StringToken> prefix) {
 
 		ArrayList<StringToken> newTokens =
-				new ArrayList<StringToken>(this.tokens.size() + seq.getTokens().size());
-		newTokens.addAll(seq.getTokens());
+				new ArrayList<StringToken>(this.tokens.size() + prefix.getTokens().size());
+		newTokens.addAll(prefix.getTokens());
 		newTokens.addAll(this.tokens);
 
 		return new StringTokenSequence(newTokens);
+	}
+	
+	public TokenSequence<StringToken> append(TokenSequence<StringToken> suffix) {
+		ArrayList<StringToken> newTokens =
+				new ArrayList<StringToken>(this.tokens.size() + suffix.getTokens().size());
+		newTokens.addAll(this.tokens);
+		newTokens.addAll(suffix.getTokens());
+
+		return new StringTokenSequence(newTokens);
+	}
+
+	public TokenSequence<StringToken> subsequence(int start, int end) {
+		return new StringTokenSequence(this.tokens.subList(start, end));
+	}
+
+	public StringToken get(int i) {
+		return tokens.get(i);
+	}
+	
+	public String toString() {
+		StringBuilder builder = new StringBuilder();
+		for (StringToken t : tokens) {
+			builder.append(t + ", ");
+		}
+		return builder.toString();
 	}
 }

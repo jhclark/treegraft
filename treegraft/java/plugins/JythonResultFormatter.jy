@@ -1,0 +1,33 @@
+from info.jonclark.treegraft.core.output import HypothesisFormatter
+from info.jonclark.treegraft.parsing.parses import BasicTreeFormatter
+
+class JythonResultFormatter(HypothesisFormatter):
+
+	def formatHypothesis(self, result, out):
+		out.println("SrcSent " + str(result.nSentence) + " " + result.inputSentence)
+		for i in xrange(result.nBestList.size()):
+			formatter = BasicTreeFormatter(tokenFactory, true, true, scorer, true)
+
+			hyp = result.nBestList.get(i)
+			tokens = tokenFactory.getTokensAsStrings(hyp.getTokens())
+			out.println(result.nSentence + " " + str(i) + " " + StringUtils.untokenize(tokens))
+
+			out.println("Overall: " + FormatUtils.formatDouble4(hyp.getLogProb()))
+			logProbs = hyp.getScores().getFeatureLogProbVector()
+			weights = scorer.getFeatureWeightVector()
+			featureNames = scorer.getFeatureProbVectorLabels()
+			for j in xrange(featureNames.length):
+				out.print(", " + featureNames[j] + ": "
+						+ FormatUtils.formatDouble2(logProbs[j]) + "("
+						+ FormatUtils.formatDouble2(logProbs[j] + weights[j]) + ")")
+			out.println()
+
+			out.println("Target parses:")
+			for parse in hyp.getParses():
+				out.println("( " + parse.getStartIndex() + " " + parse.getEndIndex() + " "
+						+ parse.getTargetTree().toString(formatter) + ")")
+			out.println("Source parses:")
+			for parse in hyp.getParses():
+				out.println("( " + parse.getStartIndex() + " " + parse.getEndIndex() + " "
+						+ parse.getSourceTree().toString(formatter) + ")")
+			out.println()

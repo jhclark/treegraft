@@ -15,7 +15,7 @@ import java.util.List;
 public class IntegerTokenFactory extends TokenFactory<IntegerToken> {
 
 	private static final int DEFAULT_VOCAB_SIZE = 10000;
-	private final HashMap<String, IntegerToken> str2tok = new HashMap<String, IntegerToken>();
+	private final HashMap<String, IntegerToken> str2tok = new HashMap<String, IntegerToken>(DEFAULT_VOCAB_SIZE);
 	private final ArrayList<String> int2str = new ArrayList<String>(DEFAULT_VOCAB_SIZE);
 
 	/**
@@ -42,7 +42,7 @@ public class IntegerTokenFactory extends TokenFactory<IntegerToken> {
 		if (tok == null) {
 			int id = int2str.size();
 			tok = new IntegerToken(id, terminal);
-			str2tok.put(str, tok);
+			str2tok.put(key, tok);
 			int2str.add(str);
 		}
 		return tok;

@@ -11,8 +11,64 @@
 </sealing>
 </manifest>
 <selectedElements exportClassFiles="true" exportJavaFiles="true" exportOutputFolder="false">
+<javaElement handleIdentifier="=numbertrans/&lt;info.jonclark.log"/>
+<javaElement handleIdentifier="=numbertrans/&lt;net.sourceforge.numbertrans.framework.scribe"/>
+<javaElement handleIdentifier="=numbertrans/&lt;info.jonclark.media"/>
+<javaElement handleIdentifier="=numbertrans/&lt;net.sourceforge.numbertrans.languages.oriya"/>
+<javaElement handleIdentifier="=numbertrans/&lt;net.sourceforge.numbertrans.languages"/>
+<javaElement handleIdentifier="=numbertrans/&lt;info.jonclark.database"/>
+<javaElement handleIdentifier="=numbertrans/&lt;net.sourceforge.numbertrans.framework.parser"/>
+<javaElement handleIdentifier="=numbertrans/&lt;info.jonclark.io"/>
+<javaElement handleIdentifier="=numbertrans/&lt;info.jonclark.util"/>
+<javaElement handleIdentifier="=numbertrans/&lt;net.sourceforge.numbertrans.languages.kannada"/>
+<javaElement handleIdentifier="=numbertrans/&lt;net.sourceforge.numbertrans.languages.roman"/>
+<javaElement handleIdentifier="=numbertrans/&lt;info.jonclark.testcases"/>
+<javaElement handleIdentifier="=numbertrans/&lt;net.sourceforge.numbertrans.ui"/>
+<javaElement handleIdentifier="=numbertrans/&lt;info.jonclark.stat"/>
+<javaElement handleIdentifier="=numbertrans/&lt;info.jonclark.corpus.lm"/>
+<javaElement handleIdentifier="=numbertrans/&lt;info.jonclark.sourcecode"/>
+<javaElement handleIdentifier="=numbertrans/&lt;net.sourceforge.numbertrans.languages.malayalam"/>
+<javaElement handleIdentifier="=numbertrans/&lt;info.jonclark.corpus.management.runs"/>
+<javaElement handleIdentifier="=numbertrans/&lt;info.jonclark.corpus"/>
+<javaElement handleIdentifier="=numbertrans/&lt;net.sourceforge.numbertrans.languages.bengali"/>
+<javaElement handleIdentifier="=numbertrans/&lt;net.sourceforge.numbertrans.languages.korean"/>
+<javaElement handleIdentifier="=numbertrans/&lt;info.jonclark.corpus.management.documents"/>
+<javaElement handleIdentifier="=numbertrans/&lt;info.jonclark.corpus.interfaces"/>
+<javaElement handleIdentifier="=numbertrans/&lt;net.sourceforge.numbertrans.languages.telugu"/>
+<javaElement handleIdentifier="=numbertrans/&lt;info.jonclark.corpus.languagetools.ja"/>
+<javaElement handleIdentifier="=numbertrans/&lt;info.jonclark.corpus.management.iterators.interfaces"/>
+<javaElement handleIdentifier="=numbertrans/&lt;info.jonclark.fun"/>
+<javaElement handleIdentifier="=numbertrans/&lt;net.sourceforge.numbertrans.languages.gujarati"/>
+<javaElement handleIdentifier="=numbertrans/&lt;info.jonclark.print"/>
+<javaElement handleIdentifier="=numbertrans/&lt;net.sourceforge.numbertrans.languages.english"/>
+<javaElement handleIdentifier="=numbertrans/&lt;info.jonclark.clientserver"/>
+<javaElement handleIdentifier="=numbertrans/&lt;net.sourceforge.numbertrans.languages.tamil"/>
+<javaElement handleIdentifier="=numbertrans/&lt;net.sourceforge.numbertrans.languages.arabic"/>
+<javaElement handleIdentifier="=numbertrans/&lt;info.jonclark.corpus.management.etc"/>
+<javaElement handleIdentifier="=numbertrans/&lt;info.jonclark.corpus.management.iterators.impl"/>
+<javaElement handleIdentifier="=numbertrans/&lt;info.jonclark.corpus.management.directories"/>
+<javaElement handleIdentifier="=numbertrans/&lt;info.jonclark.corpus.heuristic"/>
 <javaElement handleIdentifier="=treegraft/src"/>
-<javaElement handleIdentifier="=treegraft/external"/>
+<javaElement handleIdentifier="=numbertrans/&lt;net.sourceforge.numbertrans.languages.thai"/>
+<javaElement handleIdentifier="=phramer/src"/>
+<javaElement handleIdentifier="=numbertrans/&lt;net.sourceforge.numbertrans.tools"/>
+<javaElement handleIdentifier="=numbertrans/&lt;net.sourceforge.numbertrans.languages.chinese"/>
+<javaElement handleIdentifier="=numbertrans/&lt;net.sourceforge.numbertrans.framework.base"/>
+<javaElement handleIdentifier="=numbertrans/&lt;info.jonclark.corpus.parallel"/>
+<javaElement handleIdentifier="=numbertrans/&lt;info.jonclark.corpus.gutenberg"/>
+<javaElement handleIdentifier="=numbertrans/&lt;net.sourceforge.numbertrans.languages.japanese"/>
+<javaElement handleIdentifier="=numbertrans/&lt;info.jonclark.corpus.lm.smoothing"/>
+<javaElement handleIdentifier="=numbertrans/&lt;info.jonclark.corpus.management"/>
+<javaElement handleIdentifier="=numbertrans/&lt;info.jonclark.lang"/>
+<javaElement handleIdentifier="=numbertrans/&lt;net.sourceforge.numbertrans.languages.gurumukhi"/>
+<javaElement handleIdentifier="=numbertrans/&lt;info.jonclark.cache"/>
+<javaElement handleIdentifier="=numbertrans/&lt;info.jonclark.properties"/>
+<javaElement handleIdentifier="=numbertrans/&lt;info.jonclark.gui"/>
+<javaElement handleIdentifier="=numbertrans/&lt;info.jonclark.corpus.management.test"/>
+<javaElement handleIdentifier="=numbertrans/&lt;net.sourceforge.numbertrans.languages.urdu"/>
+<javaElement handleIdentifier="=numbertrans/&lt;info.jonclark.clientserver.examples"/>
+<javaElement handleIdentifier="=numbertrans/&lt;info.jonclark.corpus.tokenize"/>
+<javaElement handleIdentifier="=numbertrans/&lt;net.sourceforge.numbertrans.languages.tibetan"/>
 </selectedElements>
 <fatjar builder="org.eclipse.jdt.ui.plain_jar_builder" launchConfig=""/>
 </jardesc>

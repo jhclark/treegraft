@@ -1,31 +1,45 @@
 package info.jonclark.treegraft.parsing.forestunpacking;
 
-import info.jonclark.treegraft.core.merging.Merger;
+import info.jonclark.lang.Options;
+import info.jonclark.lang.OptionsTarget;
+import info.jonclark.treegraft.Treegraft.TreegraftConfig;
 import info.jonclark.treegraft.core.scoring.FeatureScores;
 import info.jonclark.treegraft.core.scoring.Scorer;
 import info.jonclark.treegraft.core.tokens.Token;
 import info.jonclark.treegraft.parsing.chartparser.ActiveArc;
 import info.jonclark.treegraft.parsing.chartparser.Key;
+import info.jonclark.treegraft.parsing.merging.Merger;
 import info.jonclark.treegraft.parsing.parses.Parse;
+import info.jonclark.treegraft.parsing.parses.ParseFactory;
 import info.jonclark.treegraft.parsing.rules.GrammarRule;
 import info.jonclark.treegraft.parsing.transduction.Transducer;
 
 import java.util.ArrayList;
 import java.util.List;
 
+@OptionsTarget(ForestUnpacker.ForestUnpackerOptions.class)
 public class ForestUnpacker<R extends GrammarRule<T>, T extends Token> {
 
 	private final Scorer<R, T> scorer;
 	private final Merger<R, T> pruner;
 	private final Transducer<R, T> transducer;
+	private final ParseFactory<R, T> parseFactory;
+	private final List<T> sourceInputTokens;
+
+	public static class ForestUnpackerOptions implements Options {
+
+	}
 
 	// TODO: Pass parses from the left to the parses being created on the right
 	// e.g. we can use these for language model context
-	public ForestUnpacker(Scorer<R, T> scorer, Merger<R, T> merger, Transducer<R, T> transducer) {
+	public ForestUnpacker(ForestUnpackerOptions opts, TreegraftConfig<R, T> config,
+			ParseFactory<R, T> parseFactory, List<T> sourceInputTokens) {
 
-		this.scorer = scorer;
-		this.pruner = merger;
-		this.transducer = transducer;
+		this.scorer = config.scorer;
+		this.pruner = config.merger;
+		this.transducer = config.ruleFactory.getTransducer();
+		this.parseFactory = parseFactory;
+		this.sourceInputTokens = sourceInputTokens;
 	}
 
 	/**
@@ -52,6 +66,11 @@ public class ForestUnpacker<R extends GrammarRule<T>, T extends Token> {
 	private List<Parse<T>> unpackNonterminalBackpointers(Key<R, T> key,
 			ActiveArc<R, T> arcToUnpack, R ruleToUnpack) {
 
+		// TODO: Figure out how to safely cache
+		// if(key.getTransducedParseCache() != null) {
+		// return key.getTransducedParseCache();
+		// }
+
 		// iterate over all of the RHS constituents for this key
 		int[] targetToSourceAlignment = transducer.getTargetToSourceRhsAlignment(ruleToUnpack);
 		T[] transducedRhs = transducer.transduceRhs(ruleToUnpack);
@@ -65,12 +84,14 @@ public class ForestUnpacker<R extends GrammarRule<T>, T extends Token> {
 
 		for (int targetRhsIndex = 0; targetRhsIndex < transducedRhs.length; targetRhsIndex++) {
 
+			int sourceRhsIndex = targetToSourceAlignment[targetRhsIndex];
 			if (transducedRhs[targetRhsIndex].isTerminal()) {
+
 				parsesFromBackpointer[targetRhsIndex] =
-						outputTargetTerminal(ruleToUnpack, transducedRhs[targetRhsIndex]);
+						outputTargetTerminal(key.getStartIndex(), key.getEndIndex(), ruleToUnpack,
+								transducedRhs[targetRhsIndex], sourceRhsIndex, targetRhsIndex);
 			} else {
 
-				int sourceRhsIndex = targetToSourceAlignment[targetRhsIndex];
 				List<Key<R, T>> backpointers = arcToUnpack.getBackpointers(sourceRhsIndex);
 				assert backpointers != null : "null backpointer list at index " + sourceRhsIndex
 						+ " for key " + key.toString();
@@ -82,30 +103,36 @@ public class ForestUnpacker<R extends GrammarRule<T>, T extends Token> {
 		}
 
 		List<Parse<T>> result =
-				pruner.combineCrossProductOfParses(ruleToUnpack, parsesFromBackpointer, scorer,
-						transducer);
+				pruner.combineCrossProductOfParses(ruleToUnpack, sourceInputTokens,
+						key.getStartIndex(), key.getEndIndex(), parsesFromBackpointer, scorer,
+						transducer, sourceInputTokens, parseFactory);
 
 		for (Parse<T> parse : result) {
 
 			// update parse scores
-			FeatureScores combinedScore = scorer.combineRuleScoreWithChildren(parse, ruleToUnpack);
+			FeatureScores combinedScore =
+					scorer.combineRuleScoreWithChildren(parse, ruleToUnpack, sourceInputTokens);
 			parse.setCurrentScore(combinedScore);
-
-			// TODO: Do this when creating the "empty seed parse"
-			T[] sourceRhs = ruleToUnpack.getRhs();
-			for (int sourceRhsIndex = 0; sourceRhsIndex < sourceRhs.length; sourceRhsIndex++) {
-				if (sourceRhs[sourceRhsIndex].isTerminal()) {
-					parse.appendSourceTerminal(sourceRhsIndex, sourceRhs[sourceRhsIndex]);
-				}
-			}
 		}
+
+		key.setTransducedParseCache(result);
 
 		return result;
 	}
 
-	private ArrayList<Parse<T>> outputTargetTerminal(R parentRule, T terminal) {
-		FeatureScores terminalScore = scorer.scoreTerminalToken(terminal);
-		Parse<T> terminalParse = new Parse<T>(terminal, false, terminalScore);
+	private ArrayList<Parse<T>> outputTargetTerminal(int sourceTokenStart, int sourceTokenEnd,
+			R parentRule, T terminal, int sourceRhsIndex, int targetRhsIndex) {
+
+		// TODO: MAKE SURE ONLY THE **FIRST/LAST** TERMINAL GETS MARKERS ADDED
+
+		Parse<T> terminalParse =
+				parseFactory.createParse(sourceTokenStart, sourceTokenEnd, sourceInputTokens,
+						terminal, parentRule, targetRhsIndex);
+		FeatureScores terminalScore = scorer.scoreTerminalParse(terminalParse);
+		terminalParse.setCurrentScore(terminalScore);
+
+		// System.out.println("TRANSDUCED TERMINAL: " +
+		// terminalParse.toString());
 
 		ArrayList<Parse<T>> list = new ArrayList<Parse<T>>(1);
 		list.add(terminalParse);
@@ -131,6 +158,10 @@ public class ForestUnpacker<R extends GrammarRule<T>, T extends Token> {
 								unpackNonterminalBackpointers(backpointer, backpointerArc,
 										backpointerRule);
 						parsesFromNonterminal.addAll(parsesFromBackpointer);
+
+						// for (Parse<T> p : parsesFromBackpointer) {
+						// System.out.println("TRANSDUCED: " + p.toString());
+						// }
 					}
 
 				}

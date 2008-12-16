@@ -1,37 +1,42 @@
 package info.jonclark.treegraft.distributed.multithreading;
 
+import info.jonclark.lang.OptionParser;
 import info.jonclark.lang.Pair;
 import info.jonclark.properties.SmartProperties;
+import info.jonclark.stat.TextProgressBar;
 import info.jonclark.treegraft.Treegraft;
+import info.jonclark.treegraft.core.plugin.ReflectionException;
 import info.jonclark.treegraft.core.tokens.Token;
 import info.jonclark.treegraft.core.tokens.TokenFactory;
 import info.jonclark.treegraft.parsing.grammar.GrammarLoader;
-import info.jonclark.treegraft.parsing.rules.GrammarRule;
+import info.jonclark.treegraft.parsing.rules.RuleException;
 import info.jonclark.treegraft.parsing.rules.RuleFactory;
+import info.jonclark.treegraft.parsing.synccfg.SyncCFGRule;
+import info.jonclark.util.StringUtils;
 
 import java.io.IOException;
 import java.text.ParseException;
 import java.util.concurrent.ArrayBlockingQueue;
 
-public class MultithreadedTreegraft<R extends GrammarRule<T>, T extends Token> extends
+public class MultithreadedTreegraft<R extends SyncCFGRule<T>, T extends Token> extends
 		Treegraft<R, T> {
 
-	private final ArrayBlockingQueue<Pair<Integer, String>> sentences;
+	private ArrayBlockingQueue<Pair<Integer, String>> sentences;
 	private final int nThreads;
 
-	public MultithreadedTreegraft(SmartProperties props, TokenFactory<T> tokenFactory,
-			RuleFactory<R, T> ruleFactory, GrammarLoader<R, T> grammarLoader, int nThreads)
-			throws IOException, ParseException, ReflectionException {
+	public MultithreadedTreegraft(TreegraftCoreOptions config, SmartProperties props,
+			OptionParser configurator, TokenFactory<T> tokenFactory,
+			RuleFactory<R, T> ruleFactory, GrammarLoader<R, T> grammarLoader,
+			GrammarLoader<R, T> lexiconLoader, int nThreads) throws IOException, ParseException,
+			ReflectionException, RuleException {
 
 		// use one of everything... except parsers and decoders
-		super(props, tokenFactory, ruleFactory, grammarLoader);
+		super(config, props, configurator, tokenFactory, ruleFactory, grammarLoader, lexiconLoader);
 
-		this.nThreads = nThreads;
 		this.sentences =
 				new ArrayBlockingQueue<Pair<Integer, String>>(super.sentences.length, true);
-		for (int i = 0; i < super.sentences.length; i++) {
-			this.sentences.add(new Pair<Integer, String>(i, super.sentences[i]));
-		}
+
+		this.nThreads = nThreads;
 	}
 
 	@Override
@@ -39,6 +44,15 @@ public class MultithreadedTreegraft<R extends GrammarRule<T>, T extends Token> e
 
 		// share the large read-only data structures such as LM and Grammar
 		// just use a separate thread per sentence
+
+		this.sentences.clear();
+		for (int i = 0; i < super.sentences.length; i++) {
+			this.sentences.add(new Pair<Integer, String>(i, super.sentences[i]));
+		}
+
+		final TextProgressBar progressBar =
+				new TextProgressBar(System.err, "sent", 100, super.opts.barWidth, super.opts.animatedBar);
+		progressBar.beginTask(sentences.size());
 
 		final Thread[] threads = new Thread[nThreads];
 
@@ -48,15 +62,31 @@ public class MultithreadedTreegraft<R extends GrammarRule<T>, T extends Token> e
 					Pair<Integer, String> pair;
 					while ((pair = sentences.poll()) != null) {
 						try {
-							results[pair.first] = translate(pair.second);
+							results[pair.first] = translate(pair.first, pair.second);
 						} catch (Throwable t) {
-							// don't fail just because one sentences dies!
-							results[pair.first] = new Result<T>(t);
+							t.printStackTrace();
+							System.exit(1);
+							// results[pair.first] = new Result<T>(pair.first,
+							// t);
+							// log.severe("Ignoring sentence failure: " +
+							// StringUtils.getStackTrace(t));
+						}
+						synchronized (progressBar) {
+							progressBar.recordEventCompletion();
 						}
 					}
 				}
 			};
 			threads[i].start();
 		}
+
+		for (int i = 0; i < threads.length; i++) {
+			try {
+				threads[i].join();
+			} catch (InterruptedException e) {
+				log.severe(StringUtils.getStackTrace(e));
+			}
+		}
+		progressBar.endTask();
 	}
 }

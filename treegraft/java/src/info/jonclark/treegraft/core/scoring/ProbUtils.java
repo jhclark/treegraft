@@ -6,6 +6,9 @@ package info.jonclark.treegraft.core.scoring;
  * @author Jonathan Clark
  */
 public class ProbUtils {
+	
+	public static final double FLOOR = -100;
+	public static final double EPSILON = 0.00001;
 
 	/**
 	 * Gets the log probability of the given number.
@@ -22,5 +25,10 @@ public class ProbUtils {
 		// return Math.pow(logProb, 10); // faster, please
 		return logProb * logProb * logProb * logProb * logProb * logProb * logProb * logProb
 				* logProb * logProb;
+	}
+
+	public static double sumInNonLogSpace(double logProbA, double logProbB) {
+		double sum = unlog(logProbA) + unlog(logProbB);
+		return logProb(sum);
 	}
 }

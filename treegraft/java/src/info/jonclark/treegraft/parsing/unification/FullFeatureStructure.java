@@ -2,7 +2,6 @@ package info.jonclark.treegraft.parsing.unification;
 
 import info.jonclark.treegraft.parsing.unification.Feature.FeatureType;
 
-import java.io.File;
 import java.util.HashMap;
 import java.util.Map.Entry;
 

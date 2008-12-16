@@ -1,8 +1,12 @@
 package info.jonclark.treegraft.parsing.chartparser;
 
+import info.jonclark.lang.Options;
+import info.jonclark.lang.OptionsTarget;
 import info.jonclark.log.LogUtils;
 import info.jonclark.stat.ProfilerTimer;
+import info.jonclark.treegraft.Treegraft.TreegraftConfig;
 import info.jonclark.treegraft.core.tokens.Token;
+import info.jonclark.treegraft.parsing.Parser;
 import info.jonclark.treegraft.parsing.grammar.Grammar;
 import info.jonclark.treegraft.parsing.oov.OutOfVocabularyHandler;
 import info.jonclark.treegraft.parsing.rules.GrammarRule;
@@ -24,7 +28,8 @@ import java.util.logging.Logger;
  * @param <T>
  *            The token type being used in this <code>ChartParser</code>
  */
-public class ChartParser<R extends GrammarRule<T>, T extends Token> {
+@OptionsTarget(ChartParser.ChartParserOptions.class)
+public class ChartParser<R extends GrammarRule<T>, T extends Token> implements Parser<R, T> {
 
 	private Grammar<R, T> grammar;
 	private RuleFactory<R, T> ruleFactory;
@@ -42,6 +47,10 @@ public class ChartParser<R extends GrammarRule<T>, T extends Token> {
 	private final ProfilerTimer nonterminalArcAdding;
 
 	private boolean updated = false;
+
+	public static class ChartParserOptions implements Options {
+
+	}
 
 	private class PostMortem extends Thread {
 		private final Grammar<R, T> grammar;
@@ -61,16 +70,23 @@ public class ChartParser<R extends GrammarRule<T>, T extends Token> {
 		}
 	}
 
-	public ChartParser(RuleFactory<R, T> ruleFactory, Grammar<R, T> grammar,
-			OutOfVocabularyHandler<R, T> oovHandler) {
-		this(ruleFactory, grammar, oovHandler, null);
-	}
+	// public ChartParser(RuleFactory<R, T> ruleFactory, Grammar<R, T> grammar,
+	// OutOfVocabularyHandler<R, T> oovHandler) {
+	// this(ruleFactory, grammar, oovHandler);
+	// }
+	//
+	// public ChartParser(RuleFactory<R, T> ruleFactory, Grammar<R, T> grammar,
+	// OutOfVocabularyHandler<R, T> oovHandler, ProfilerTimer parentTimer) {
+	// }
 
-	public ChartParser(RuleFactory<R, T> ruleFactory, Grammar<R, T> grammar,
-			OutOfVocabularyHandler<R, T> oovHandler, ProfilerTimer parentTimer) {
-		this.ruleFactory = ruleFactory;
-		this.grammar = grammar;
-		this.parserTimer = ProfilerTimer.newTimer("ChartParser", parentTimer, true, false);
+	public ChartParser(ChartParserOptions opts, TreegraftConfig<R, T> config) {
+
+		this.ruleFactory = config.ruleFactory;
+		this.grammar = config.grammar;
+		this.oovHandler = config.oovHandler;
+
+		this.parserTimer =
+				ProfilerTimer.newTimer("ChartParser", config.profiler.processingTimer, true, false);
 		this.lexicalLookup = ProfilerTimer.newTimer("lexicalLookup", parserTimer, true, false);
 		this.lexicalArcExtending =
 				ProfilerTimer.newTimer("lexicalArcExtending", parserTimer, true, false);
@@ -95,22 +111,23 @@ public class ChartParser<R extends GrammarRule<T>, T extends Token> {
 	 * 
 	 * @param input
 	 * @param chart
-	 * @throws RuleException If the OOV handler generates a bad rule
+	 * @throws RuleException
+	 *             If the OOV handler generates a bad rule
 	 */
 	public Chart<R, T> parse(T[] input) throws RuleException {
 
 		parserTimer.go();
 
-		Chart<R, T> chart = new Chart<R, T>(input.length);
+		List<T> inputList = Arrays.asList(input);
+		Chart<R, T> chart = new Chart<R, T>(inputList);
 		Agenda<R, T> agenda = new Agenda<R, T>(chart);
 		ActiveArcManager<R, T> arcMan = new ActiveArcManager<R, T>(input.length, parserTimer);
-		List<T> inputList = Arrays.asList(input);
 		// ConstraintEngine constraintEngine = new ConstraintEngine();
 
 		// do a post-mortem analysis of what was taking so @#$! long if the user
 		// kills the process with Ctrl+C or it otherwise dies unexpectedly
-		PostMortem postmortem = new PostMortem(grammar);
-		Runtime.getRuntime().addShutdownHook(postmortem);
+		// PostMortem postmortem = new PostMortem(grammar);
+		// Runtime.getRuntime().addShutdownHook(postmortem);
 
 		// step 1
 		int i = 0;
@@ -152,7 +169,7 @@ public class ChartParser<R extends GrammarRule<T>, T extends Token> {
 				lexicalArcAdding.pause();
 
 				i++;
-				log.info("Now processing input symbol " + i + " of " + input.length);
+				log.fine("Now processing input symbol " + i + " of " + input.length);
 			}
 
 			if (agenda.isEmpty()) {
@@ -233,11 +250,11 @@ public class ChartParser<R extends GrammarRule<T>, T extends Token> {
 
 		parserTimer.pause();
 
-		log.info("PARSING COMPLETE: Created " + arcMan.size() + " active arcs and "
+		log.fine("PARSING COMPLETE: Created " + arcMan.size() + " active arcs and "
 				+ chart.getKeys().size() + " keys.");
 
-		postmortem.run();
-		Runtime.getRuntime().removeShutdownHook(postmortem);
+		// postmortem.run();
+		// Runtime.getRuntime().removeShutdownHook(postmortem);
 
 		return chart;
 	}
