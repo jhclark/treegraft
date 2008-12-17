@@ -13,6 +13,7 @@ import info.jonclark.treegraft.core.lm.LanguageModel;
 import info.jonclark.treegraft.core.lm.LanguageModelMultiScore;
 import info.jonclark.treegraft.core.lm.LanguageModelScore;
 import info.jonclark.treegraft.core.lm.SimpleNGramLanguageModel;
+import info.jonclark.treegraft.core.lm.EfficientNGramLanguageModel.EfficientNGramLanguageModelOptions;
 import info.jonclark.treegraft.core.scoring.Feature;
 import info.jonclark.treegraft.core.scoring.ProbUtils;
 import info.jonclark.treegraft.core.tokens.Token;
@@ -76,8 +77,11 @@ public class LanguageModelFeature<R extends GrammarRule<T>, T extends Token> imp
 
 			// lmArr[i] = new
 			// SimpleNGramLanguageModel<T>(config.profiler.featureTimer);
+			EfficientNGramLanguageModelOptions childOpts =
+					config.configurator.getOptions(EfficientNGramLanguageModelOptions.class);
 			lmArr[i] =
-					(LanguageModel<T>) new EfficientNGramLanguageModel(config.profiler.featureTimer);
+					(LanguageModel<T>) new EfficientNGramLanguageModel(childOpts,
+							config.profiler.featureTimer);
 			InputStream stream = new FileInputStream(lmFile);
 			if (lmFile.getName().endsWith(".gz")) {
 				stream = new GZIPInputStream(stream);

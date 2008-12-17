@@ -114,7 +114,7 @@ public class OptionParser {
 	}
 
 	private <X extends Options> X getOptions(Class<X> optionsClass, boolean dummy) {
-
+		
 		try {
 			Set<String> seenOpts = new HashSet<String>();
 			passedInOptions = new StringBuilder("{");
@@ -139,19 +139,19 @@ public class OptionParser {
 				seenOpts.add(key);
 				Field field = nameToField.get(key);
 				Class<?> fieldType = field.getType();
-				// If option is boolean type then
-				// we set the associate field to true
-				if (fieldType == boolean.class) {
-					field.setBoolean(options, true);
-					// passedInOptions.append(String.format(" %s => true",
-					// opt.name()));
-				}
+//				// If option is boolean type then
+//				// we set the associate field to true
+//				if (fieldType == boolean.class) {
+//					field.setBoolean(options, true);
+//					// passedInOptions.append(String.format(" %s => true",
+//					// opt.name()));
+//				}
 				// Otherwise look at next arg and
 				// set field to that value
 				// this will automatically
 				// convert String to double or
 				// whatever
-				else {
+//				else {
 					if (value != null)
 						value.trim();
 					// passedInOptions.append(String.format(" %s => %s",
@@ -164,6 +164,8 @@ public class OptionParser {
 						field.setFloat(options, Float.parseFloat(value));
 					} else if (fieldType == short.class) {
 						field.setFloat(options, Short.parseShort(value));
+					} else if (fieldType == boolean.class) {
+						field.setBoolean(options, Boolean.parseBoolean(value));
 					} else if (fieldType.isEnum()) {
 						Object[] possibleValues = fieldType.getEnumConstants();
 						boolean found = false;
@@ -234,7 +236,7 @@ public class OptionParser {
 						}
 					}
 				}
-			}
+//			}
 
 			// passedInOptions.append(" }");
 

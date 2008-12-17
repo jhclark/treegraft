@@ -73,9 +73,6 @@ public class LexicalProbsFeature<R extends GrammarRule<T>, T extends Token> impl
 		this.lexProbTimer =
 				ProfilerTimer.newTimer("lexProbs", config.profiler.featureTimer, true, false);
 		this.weights = new double[] { opts.lexSgtWeight, opts.lexTgsWeight };
-
-		System.out.println(opts.sgtFile);
-		System.out.println(opts.tgsFile);
 		
 		int nEntries = FileUtils.countLines(opts.sgtFile) + FileUtils.countLines(opts.tgsFile);
 		task.beginTask(nEntries);

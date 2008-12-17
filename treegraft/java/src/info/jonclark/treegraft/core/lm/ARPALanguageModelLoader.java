@@ -106,6 +106,10 @@ public class ARPALanguageModelLoader<T extends Token> implements LanguageModelLo
 						task.recordEventCompletion();
 					total++;
 
+					if (total % 1000000 == 0) {
+						task.setMetaInfo(lm.getMetaInfo() + ", loading " + filePosition + "-grams");
+					}
+
 					// if(total >= 50000) {
 					// log.warning("HACK done loading LM: Read " + total +
 					// " n-grams and kept " + kept);

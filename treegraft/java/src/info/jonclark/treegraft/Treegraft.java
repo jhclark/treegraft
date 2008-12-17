@@ -98,10 +98,10 @@ public class Treegraft<R extends SyncCFGRule<T>, T extends Token> {
 		@Option(name = "global.progressBar.isAnimated", usage = "Should we animate text progress bars by using the backspace character repeatedly? (Not recommended for logging)")
 		public boolean animatedBar;
 
-		@Option(name = "output.file", usage = "The file to which parse trees, n-best lists, and/or transductions should be written", errorIfFileExists = true)
+		@Option(name = "output.file", usage = "The file to which parse trees, n-best lists, and/or transductions should be written", errorIfFileExists = false)
 		public File outFile;
 
-		@Option(name = "transfer.latticeFile", usage = "The file to which lattices from the transfer stage should be written", errorIfFileExists = true)
+		@Option(name = "transfer.latticeFile", usage = "The file to which lattices from the transfer stage should be written", errorIfFileExists = false)
 		public File latticeFile;
 
 		@Option(name = "output.encoding", usage = "The character encoding for output files", required = false, defaultValue = "UTF-8")
@@ -215,6 +215,9 @@ public class Treegraft<R extends SyncCFGRule<T>, T extends Token> {
 		// init factories
 
 		HashSet<T> sourceVocab = new HashSet<T>();
+		// TODO: Make this more elegant somehow?
+		sourceVocab.add(tokenFactory.makeToken("<s>", true));
+		sourceVocab.add(tokenFactory.makeToken("</s>", true));
 		config.sourceVocab = sourceVocab;
 		for (String sentence : sentences) {
 			T[] inputTokens = tokenFactory.makeTokens(StringUtils.tokenize(sentence), true);
@@ -244,10 +247,8 @@ public class Treegraft<R extends SyncCFGRule<T>, T extends Token> {
 		sourceVocab.addAll(addSourceVocab);
 
 		log.info("Loading grammar...");
-		ProfilerTimer loadTimer =
-				ProfilerTimer.newTimer("Loading", profiler.treegraftTimer, true, true);
 		ProfilerTimer loadGrammarTimer =
-				ProfilerTimer.newTimer("loadGrammar", loadTimer, true, true);
+				ProfilerTimer.newTimer("loadGrammar", config.profiler.loadTimer, true, true);
 
 		Grammar<R, T> grammar =
 				new Grammar<R, T>(tokenFactory, opts.startSymbols, sourceVocab, filterLHSToks,
@@ -278,8 +279,10 @@ public class Treegraft<R extends SyncCFGRule<T>, T extends Token> {
 		HashSet<T> addTargetVocab = morphGen.getAdditionalTargetVocabulary(sourceVocab);
 		config.targetVocab.addAll(addTargetVocab);
 
+		log.info("Source vocab size = " + config.sourceVocab.size() + "\nTarget vocab size = "
+				+ config.targetVocab.size());
+
 		loadGrammarTimer.pause();
-		loadTimer.pause();
 
 		// load features after we already know the target-side vocabulary, etc.
 		List<Feature<R, T, ?>> features =
@@ -292,7 +295,7 @@ public class Treegraft<R extends SyncCFGRule<T>, T extends Token> {
 		LogLinearScorerOptions scorerOpts = configurator.getOptions(LogLinearScorerOptions.class);
 		config.scorer = new LogLinearScorer<R, T>(scorerOpts, config);
 
-		loadTimer.pause();
+		profiler.loadTimer.pause();
 	}
 
 	private void validateFeatures(String[] featureClasses, OptionParser configurator)
@@ -468,7 +471,7 @@ public class Treegraft<R extends SyncCFGRule<T>, T extends Token> {
 		System.out.println("Treegraft V0.4.0 -- by Jonathan Clark (December 2008)");
 		System.out.println();
 
-		if (args.length != 1 && args.length != 2) {
+		if (args.length == 0) {
 			System.err.println("Usage: treegraft [<properties_file> | -if <xfer_ini_file>]");
 			System.exit(1);
 		}
@@ -488,23 +491,25 @@ public class Treegraft<R extends SyncCFGRule<T>, T extends Token> {
 		}
 		log.info("Found " + configurables.size() + " plug-ins: " + builder.toString() + "\n");
 
-		if (args[0].equals("-h") || args[0].equals("-help") || args[0].equals("--help")) {
-			args = ArrayUtils.cutFirst(args, 1);
-			OptionParser configurator =
-					new OptionParser(configurables, args, new Properties(), false);
-			System.out.println(configurator.getGlobalUsage());
-			System.exit(0);
-		}
+		Properties props = new Properties();
+		if (args.length > 0) {
+			if (args[0].equals("-h") || args[0].equals("-help") || args[0].equals("--help")) {
+				args = ArrayUtils.cutFirst(args, 1);
+				OptionParser configurator =
+						new OptionParser(configurables, args, new Properties(), false);
+				System.out.println(configurator.getGlobalUsage());
+				System.exit(0);
+			}
 
-		Properties props;
-		if (args[0].equals("-if")) {
-			props = XferAdapter.parseConfigFile(args[1]);
-			args = ArrayUtils.cutFirst(args, 2);
+			if (args[0].equals("-if")) {
+				props = XferAdapter.parseConfigFile(args[1]);
+				args = ArrayUtils.cutFirst(args, 2);
 
-		} else {
-			props = PropertyUtils.getProperties(args[0]);
-			args = ArrayUtils.cutFirst(args, 1);
+			} else {
+				props = PropertyUtils.getProperties(args[0]);
+				args = ArrayUtils.cutFirst(args, 1);
 
+			}
 		}
 
 		boolean failOnUnrecognized = false;

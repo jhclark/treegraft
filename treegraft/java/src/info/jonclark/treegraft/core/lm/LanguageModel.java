@@ -40,8 +40,17 @@ public interface LanguageModel<T extends Token> {
 	public void setOrder(int n, int[] expectedItems);
 
 	public void setOOVProb(double lobProb);
-	
+
 	public void setSentenceBeginMarker(TokenSequence<T> bos);
-	
+
 	public void setSentenceEndMarker(TokenSequence<T> eos);
+
+	/**
+	 * Gets a human-readable string with meta-information about the language
+	 * model. This information might be displayed while the LM is loading. For
+	 * example, the number of hash collisions encountered while building the LM.
+	 * 
+	 * @return
+	 */
+	public String getMetaInfo();
 }

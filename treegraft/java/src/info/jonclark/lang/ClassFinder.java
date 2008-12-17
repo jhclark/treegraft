@@ -122,19 +122,20 @@ public class ClassFinder<X> {
 
 		String pathSep = System.getProperty("path.separator");
 		String classpath = System.getProperty("java.class.path");
-		// System.out.println ("classpath=" + classpath);
+//		System.out.println("classpath=" + classpath);
 
 		StringTokenizer st = new StringTokenizer(classpath, pathSep);
 		while (st.hasMoreTokens()) {
 			String path = st.nextToken();
 			file = new File(path);
+//			System.out.println(file);
 			include(null, file, map);
 		}
 
 		Iterator<URL> it = map.keySet().iterator();
 		while (it.hasNext()) {
 			URL url = it.next();
-			// System.out.println (url + "-->" + map.get (url));
+//			System.out.println(url + "-->" + map.get(url));
 		}
 
 		return map;
@@ -166,6 +167,7 @@ public class ClassFinder<X> {
 			return;
 		if (!file.isDirectory()) {
 			// could be a JAR file
+//			System.out.println(file);
 			includeJar(file, map);
 			return;
 		}
@@ -196,13 +198,17 @@ public class ClassFinder<X> {
 		URL jarURL = null;
 		JarFile jar = null;
 		try {
-			jarURL = new URL("file:/" + file.getCanonicalPath());
+//			System.out.println(file.getCanonicalPath());
+			jarURL = new URL("file://" + file.getCanonicalPath());
+//			System.out.println(jarURL.toExternalForm());
 			jarURL = new URL("jar:" + jarURL.toExternalForm() + "!/");
+//			System.out.println(jarURL.toExternalForm());
 			JarURLConnection conn = (JarURLConnection) jarURL.openConnection();
 			jar = conn.getJarFile();
 		} catch (Exception e) {
 			// not a JAR or disk I/O error
 			// either way, just skip
+			e.printStackTrace();
 			return;
 		}
 
@@ -212,23 +218,24 @@ public class ClassFinder<X> {
 		// include the jar's "default" package (i.e. jar's root)
 		map.put(jarURL, "");
 
-		Enumeration<JarEntry> e = jar.entries();
-		while (e.hasMoreElements()) {
-			JarEntry entry = e.nextElement();
-
-			if (entry.isDirectory()) {
-				if (entry.getName().toUpperCase().equals("META-INF/"))
-					continue;
-
-				try {
-					map.put(new URL(jarURL.toExternalForm() + entry.getName()),
-							packageNameFor(entry));
-				} catch (MalformedURLException murl) {
-					// whacky entry?
-					continue;
-				}
-			}
-		}
+//		Enumeration<JarEntry> e = jar.entries();
+//		while (e.hasMoreElements()) {
+//			JarEntry entry = e.nextElement();
+//
+//			if (entry.isDirectory()) {
+//				if (entry.getName().toUpperCase().equals("META-INF/"))
+//					continue;
+//
+//				try {
+////					System.out.println(entry.getName());
+//					map.put(new URL(jarURL.toExternalForm() + entry.getName()),
+//							packageNameFor(entry));
+//				} catch (MalformedURLException murl) {
+//					// whacky entry?
+//					continue;
+//				}
+//			}
+//		}
 	}
 
 	private static String packageNameFor(JarEntry entry) {
@@ -244,21 +251,6 @@ public class ClassFinder<X> {
 		if (s.endsWith("/"))
 			s = s.substring(0, s.length() - 1);
 		return s.replace('/', '.');
-	}
-
-	private final void includeResourceLocations(String packageName, Map<URL, String> map) {
-		try {
-			Enumeration<URL> resourceLocations =
-					ClassFinder.class.getClassLoader().getResources(getPackagePath(packageName));
-
-			while (resourceLocations.hasMoreElements()) {
-				map.put(resourceLocations.nextElement(), packageName);
-			}
-		} catch (Exception e) {
-			// well, we tried
-			errors.add(e);
-			return;
-		}
 	}
 
 	private final Vector<Class<? extends X>> findSubclasses(Class<X> superClass,
@@ -277,11 +269,12 @@ public class ClassFinder<X> {
 		Iterator<URL> it = locations.keySet().iterator();
 		while (it.hasNext()) {
 			URL url = it.next();
-			// System.out.println (url + "-->" + locations.get (url));
+//			 System.out.println (url + "-->" + locations.get (url));
 
 			w = findSubclasses(url, locations.get(url), superClass);
 			if (w != null && (w.size() > 0))
 				v.addAll(w);
+//			System.out.println("Found " + v.size() + " so far");
 		}
 
 		return v;
@@ -297,8 +290,8 @@ public class ClassFinder<X> {
 			// hash guarantees unique names...
 			Map<Class<?>, URL> thisResult = new TreeMap<Class<?>, URL>(CLASS_COMPARATOR);
 			Vector<Class<? extends X>> v = new Vector<Class<? extends X>>(); // ...but
-																				// return
-																				// a
+			// return
+			// a
 			// vector
 
 			// TODO: double-check for null search class

@@ -7,7 +7,6 @@ import info.jonclark.treegraft.parsing.rules.GrammarRule;
 import info.jonclark.treegraft.parsing.transduction.Transducer;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -18,14 +17,12 @@ import java.util.List;
  */
 public class ParseFactory<R extends GrammarRule<T>, T extends Token> {
 
-	private final TokenFactory<T> tokenFactory;
 	private final T bos;
 	private final T eos;
 	private final int inputLength;
 	private final Transducer<R, T> transducer;
 
 	public ParseFactory(TokenFactory<T> tokenFactory, Transducer<R, T> transducer, int inputLength) {
-		this.tokenFactory = tokenFactory;
 		this.bos = tokenFactory.makeToken("<s>", true);
 		this.eos = tokenFactory.makeToken("</s>", true);
 		this.inputLength = inputLength;

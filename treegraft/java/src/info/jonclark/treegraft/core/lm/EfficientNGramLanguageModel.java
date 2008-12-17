@@ -1,28 +1,41 @@
 package info.jonclark.treegraft.core.lm;
 
+import info.jonclark.lang.Option;
+import info.jonclark.lang.Options;
+import info.jonclark.lang.OptionsTarget;
 import info.jonclark.lang.hash.WideHashMap;
 import info.jonclark.stat.ProfilerTimer;
 import info.jonclark.treegraft.core.tokens.TokenSequence;
 import info.jonclark.treegraft.core.tokens.integer.IntegerToken;
 import info.jonclark.treegraft.core.tokens.integer.IntegerTokenSequence;
+import info.jonclark.util.FormatUtils;
 
 // supports up to a 6-gram LM w/ a vocabulary of 2M words
+@OptionsTarget(EfficientNGramLanguageModel.EfficientNGramLanguageModelOptions.class)
 public class EfficientNGramLanguageModel extends AbstractNGramLanguageModel<IntegerToken> {
 
 	private WideHashMap[] probs;
 	private final float outOfHashValue = Float.MIN_VALUE;
-	private final float LOAD_FACTOR = 0.75f;
 	private final long[] bitBuffer = new long[2];
+	private final EfficientNGramLanguageModelOptions opts;
 
-	public EfficientNGramLanguageModel(ProfilerTimer parentTimer) {
+	public static class EfficientNGramLanguageModelOptions implements Options {
+
+		@Option(name = "lm.loadFactor", usage = "The percentage (0 < p < 1) of each LM hash table that will be filled after all n-grams have been loaded")
+		public float loadFactor;
+	}
+
+	public EfficientNGramLanguageModel(EfficientNGramLanguageModelOptions opts,
+			ProfilerTimer parentTimer) {
 		super(parentTimer);
+		this.opts = opts;
 	}
 
 	public void setOrder(int order, int[] expectedItems) {
 		this.order = order;
 		this.probs = new WideHashMap[order];
 		for (int i = 0; i < order; i++) {
-			this.probs[i] = new WideHashMap(expectedItems[i], LOAD_FACTOR, outOfHashValue);
+			this.probs[i] = new WideHashMap(expectedItems[i], opts.loadFactor, outOfHashValue);
 		}
 	}
 
@@ -111,5 +124,17 @@ public class EfficientNGramLanguageModel extends AbstractNGramLanguageModel<Inte
 		}
 		lmScoreTokenTimer.pause();
 		return scoredToken;
+	}
+
+	public String getMetaInfo() {
+
+		long nCollisions = 0;
+		int nElements = 0;
+		for (int i = 0; i < probs.length; i++) {
+			nCollisions += probs[i].getCollisionCount();
+			nElements += probs[i].size();
+		}
+		double avgCollisionsPerElement = (double) nCollisions / (double) nElements;
+		return FormatUtils.formatDouble2(avgCollisionsPerElement) + " collisions/n-gram";
 	}
 }

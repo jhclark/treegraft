@@ -28,6 +28,7 @@ public class SimpleNGramLanguageModel<T extends Token> extends AbstractNGramLang
 		}
 	}
 
+	public static final float LOAD_FACTOR = 0.75f;
 	public static final boolean TRIE_MODE = false;
 	private Map<TokenSequence<T>, LMEntry>[] probs;
 	private Trie<TokenSequence<T>, T, LMEntry> trie;
@@ -43,12 +44,11 @@ public class SimpleNGramLanguageModel<T extends Token> extends AbstractNGramLang
 		} else {
 			this.probs = new HashMap[order];
 			for (int i = 0; i < order; i++) {
-				this.probs[i] = new HashMap<TokenSequence<T>, LMEntry>(1000000);
+				this.probs[i] = new HashMap<TokenSequence<T>, LMEntry>(expectedItems[i], LOAD_FACTOR);
 			}
 		}
 	}
 
-	// TODO: Presize LM hashes
 	public void addEntry(TokenSequence<T> tokenSequence, double logProb, double backoffLogProb) {
 		LMEntry entry = new LMEntry(logProb, backoffLogProb);
 		if (TRIE_MODE) {
@@ -191,5 +191,9 @@ public class SimpleNGramLanguageModel<T extends Token> extends AbstractNGramLang
 
 		LanguageModelScore scoreAll = lm.scoreSequence(seqAll);
 		System.out.println(scoreAll.getSequenceScore());
+	}
+
+	public String getMetaInfo() {
+		return "";
 	}
 }

@@ -3,6 +3,7 @@ package info.jonclark.treegraft.parsing.merging;
 import info.jonclark.lang.Option;
 import info.jonclark.lang.Options;
 import info.jonclark.lang.OptionsTarget;
+import info.jonclark.log.LogUtils;
 import info.jonclark.stat.ProfilerTimer;
 import info.jonclark.treegraft.Treegraft.TreegraftConfig;
 import info.jonclark.treegraft.core.scoring.FeatureScores;
@@ -22,6 +23,7 @@ import info.jonclark.util.DebugUtils;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.logging.Logger;
 
 /**
  * Time critical!
@@ -54,6 +56,8 @@ public class BeamSearchMerger<R extends GrammarRule<T>, T extends Token> impleme
 	}
 	private final BeamSearchMergerOptions opts;
 
+	private static final Logger log = LogUtils.getLogger();
+	
 	public BeamSearchMerger(BeamSearchMergerOptions opts, TreegraftConfig<R, T> config) {
 
 		this.opts = opts;
@@ -181,7 +185,7 @@ public class BeamSearchMerger<R extends GrammarRule<T>, T extends Token> impleme
 		// it into the beam in the first place
 		recombinationTimer.go();
 		HashMap<TokenSequence<T>, DecoderHypothesis<T>> uniqueHypotheses =
-				new HashMap<TokenSequence<T>, DecoderHypothesis<T>>();
+				new HashMap<TokenSequence<T>, DecoderHypothesis<T>>(beam1.size() * beam2.size());
 		recombinationTimer.pause();
 
 		// TODO: Apply cube pruning right here
@@ -208,7 +212,7 @@ public class BeamSearchMerger<R extends GrammarRule<T>, T extends Token> impleme
 
 				// try to do hypothesis recomination -- any two hypotheses with
 				// the same yield get lumped together
-				if (previousHypothesisWithSameYield == null) {
+				if (!opts.doHypothesisRecombination || previousHypothesisWithSameYield == null) {
 
 					// no previous hypothesis found
 					DecoderHypothesis<T> combinedHyp =
