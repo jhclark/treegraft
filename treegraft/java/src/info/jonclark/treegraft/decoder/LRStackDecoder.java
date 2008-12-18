@@ -13,7 +13,7 @@ import info.jonclark.treegraft.parsing.chartparser.Chart;
 import info.jonclark.treegraft.parsing.chartparser.Key;
 import info.jonclark.treegraft.parsing.forestunpacking.ForestUnpacker;
 import info.jonclark.treegraft.parsing.merging.Merger;
-import info.jonclark.treegraft.parsing.parses.Parse;
+import info.jonclark.treegraft.parsing.parses.PartialParse;
 import info.jonclark.treegraft.parsing.rules.GrammarRule;
 
 import java.util.ArrayList;
@@ -47,23 +47,18 @@ public class LRStackDecoder<R extends GrammarRule<T>, T extends Token> implement
 	public LRStackDecoder(LRStackDecoderOptions opts, TreegraftConfig<R, T> config) {
 
 		this.opts = opts;
-		
+
 		this.scorer = config.scorer;
 		this.merger = config.merger;
 		this.decoderTimer = config.profiler.decoderTimer;
 		this.combineTimer = ProfilerTimer.newTimer("combine-hypotheses", decoderTimer, true, false);
 	}
 
-	public List<DecoderHypothesis<T>> getKBest(Chart<R, T> chart, ForestUnpacker<R, T> unpacker) {
+	public List<DecoderHypothesis<T>> getKBest(Lattice<R, T> lattice) {
 
 		decoderTimer.go();
 
-		// keep k-best translations for each non-terminal type and each span
-		// by walking up the hypergraph, bottom-up
-
-		final int N = chart.getInputLength();
-
-		Beam<DecoderHypothesis<T>>[][] transferBeams = unpackTransferLattices(chart, unpacker, opts.nBest);
+		int N = lattice.getInputLength();
 
 		// create one beam (stack) for each number of source words covered
 		Beam<DecoderHypothesis<T>>[] decoderBeams = createEmptyDecoderBeams(opts.nBest, N);
@@ -75,7 +70,8 @@ public class LRStackDecoder<R extends GrammarRule<T>, T extends Token> implement
 
 			// copy hypotheses from the transfer beam that covers this whole
 			// span
-			outputBeam.addAll(transferBeams[0][i + 1]);
+			// transferBeams[0][i + 1]
+			outputBeam.addAll(lattice.getArcs(0, i + 1));
 
 			// now merge transfer hypotheses ending at position i, but not
 			// covering the whole input span, with decoder hypotheses starting
@@ -84,16 +80,18 @@ public class LRStackDecoder<R extends GrammarRule<T>, T extends Token> implement
 			// combination
 			for (int j = 0; j < i; j++) {
 				Beam<DecoderHypothesis<T>> decoderInputBeamLeft = decoderBeams[j];
-				Beam<DecoderHypothesis<T>> transferInputBeamRight = transferBeams[j + 1][i + 1];
+
+				// transferBeams[j + 1][i + 1]
+				List<PartialParse<T>> transferInputBeamRight = lattice.getArcs(j + 1, i + 1);
 				if (log.isLoggable(Level.FINE)) {
 					log.fine("Combining the " + decoderInputBeamLeft.currentSize()
 							+ " decoder hypotheses from 0 to " + j + " with the "
-							+ transferInputBeamRight.currentSize()
-							+ " transfer hypotheses of from " + (j + 1) + " to " + (i + 1));
+							+ transferInputBeamRight.size() + " transfer hypotheses of from "
+							+ (j + 1) + " to " + (i + 1));
 				}
 				combineTimer.go();
 				merger.combineCrossProductOfHypotheses(scorer, decoderInputBeamLeft,
-						transferInputBeamRight, outputBeam, chart.getSourceInputTokens());
+						transferInputBeamRight, outputBeam, lattice.getSourceInputTokens());
 				combineTimer.pause();
 			}
 
@@ -147,44 +145,6 @@ public class LRStackDecoder<R extends GrammarRule<T>, T extends Token> implement
 		for (int i = 0; i < beams.length; i++) {
 			beams[i] = new Beam<DecoderHypothesis<T>>(k);
 		}
-		return beams;
-	}
-
-	private Beam<DecoderHypothesis<T>>[][] createEmptyTransferBeams(int k, final int N) {
-		Beam<DecoderHypothesis<T>>[][] beams = new Beam[N + 1][N + 1];
-		for (int i = 0; i < beams.length; i++) {
-			for (int j = 0; j < beams[i].length; j++) {
-				beams[i][j] = new Beam<DecoderHypothesis<T>>(k);
-			}
-		}
-		return beams;
-	}
-
-	public Beam<DecoderHypothesis<T>>[][] unpackTransferLattices(Chart<R, T> chart,
-			ForestUnpacker<R, T> unpacker, int beamSize) {
-
-		Beam<DecoderHypothesis<T>>[][] beams =
-				createEmptyTransferBeams(beamSize, chart.getInputLength());
-
-		// for each source key, keep a beam of the best hypotheses that it can
-		// create each backpointer from higher-level keys will have access to
-		// only the partial parses in that beam
-		for (Key<R, T> key : chart.getKeys()) {
-			List<Parse<T>> partialParses = unpacker.getPartialParses(key);
-			for (Parse<T> parse : partialParses) {
-
-				ArrayList<Parse<T>> singleParseList = new ArrayList<Parse<T>>(1);
-				singleParseList.add(parse);
-
-				// create a hypothesis for each partial parse coming out of the
-				// transfer stage
-				DecoderHypothesis<T> hyp =
-						new DecoderHypothesis<T>(key.getStartIndex(), key.getEndIndex(),
-								singleParseList, parse.getTargetTokens(), parse.getScores());
-				beams[key.getStartIndex()][key.getEndIndex()].add(hyp);
-			}
-		}
-
 		return beams;
 	}
 }
