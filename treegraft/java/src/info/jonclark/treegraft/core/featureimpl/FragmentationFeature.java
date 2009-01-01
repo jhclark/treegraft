@@ -10,7 +10,7 @@ import info.jonclark.treegraft.core.scoring.ProbUtils;
 import info.jonclark.treegraft.core.tokens.Token;
 import info.jonclark.treegraft.core.tokens.TokenSequence;
 import info.jonclark.treegraft.decoder.DecoderHypothesis;
-import info.jonclark.treegraft.parsing.parses.Parse;
+import info.jonclark.treegraft.parsing.parses.PartialParse;
 import info.jonclark.treegraft.parsing.rules.GrammarRule;
 
 import java.util.List;
@@ -46,9 +46,9 @@ public class FragmentationFeature<R extends GrammarRule<T>, T extends Token> imp
 		return new FragmentationScore(logFragBonus, nFragments, nSourceWords);
 	}
 
-	public FragmentationScore combineChildParseScores(Parse<T> accumulatedParse,
+	public FragmentationScore combineChildParseScores(PartialParse<T> accumulatedParse,
 			TokenSequence<T> accumulatedSeq, FragmentationScore accumulatedScore,
-			Parse<T> addedChild, TokenSequence<T> addedSeq, FragmentationScore addedScore,
+			PartialParse<T> addedChild, TokenSequence<T> addedSeq, FragmentationScore addedScore,
 			TokenSequence<T> combinedSeq, List<T> inputSentence) {
 
 		// parses are always considered one piece
@@ -70,7 +70,7 @@ public class FragmentationFeature<R extends GrammarRule<T>, T extends Token> imp
 		return fragmentationScore;
 	}
 
-	public FragmentationScore combineRuleScoreWithChildren(Parse<T> parse,
+	public FragmentationScore combineRuleScoreWithChildren(PartialParse<T> parse,
 			FragmentationScore parseScore, R ruleToAppend, List<T> inputSentence) {
 
 		// parses are always considered one piece
@@ -82,7 +82,7 @@ public class FragmentationFeature<R extends GrammarRule<T>, T extends Token> imp
 		return calcFragScore(1, 1);
 	}
 
-	public FragmentationScore scoreTerminalParse(Parse<T> terminalParse, TokenSequence<T> seq) {
+	public FragmentationScore scoreTerminalParse(PartialParse<T> terminalParse, TokenSequence<T> seq) {
 
 		return getInitialScore();
 	}

@@ -1,12 +1,14 @@
 package info.jonclark.treegraft.core.output;
 
+import info.jonclark.lang.Options;
+import info.jonclark.lang.OptionsTarget;
+import info.jonclark.treegraft.Treegraft.TreegraftConfig;
 import info.jonclark.treegraft.core.Result;
 import info.jonclark.treegraft.core.scoring.Scorer;
 import info.jonclark.treegraft.core.tokens.Token;
 import info.jonclark.treegraft.core.tokens.TokenFactory;
-import info.jonclark.treegraft.decoder.DecoderHypothesis;
 import info.jonclark.treegraft.parsing.parses.BasicTreeFormatter;
-import info.jonclark.treegraft.parsing.parses.Parse;
+import info.jonclark.treegraft.parsing.parses.PartialParse;
 import info.jonclark.treegraft.parsing.parses.TreeFormatter;
 import info.jonclark.treegraft.parsing.rules.GrammarRule;
 import info.jonclark.util.FormatUtils;
@@ -15,15 +17,20 @@ import info.jonclark.util.StringUtils;
 import java.io.PrintWriter;
 import java.util.List;
 
+@OptionsTarget(BasicHypothesisFormatter.BasicHypothesisFormatterOptions.class)
 public class BasicHypothesisFormatter<R extends GrammarRule<T>, T extends Token> implements
 		HypothesisFormatter<R, T> {
 
 	private final Scorer<R, T> scorer;
 	private final TokenFactory<T> tokenFactory;
+	
+	public static class BasicHypothesisFormatterOptions implements Options {
+		
+	}
 
-	public BasicHypothesisFormatter(TokenFactory<T> tokenFactory, Scorer<R, T> scorer) {
-		this.scorer = scorer;
-		this.tokenFactory = tokenFactory;
+	public BasicHypothesisFormatter(BasicHypothesisFormatterOptions opts, TreegraftConfig<R,T> config) {
+		this.scorer = config.scorer;
+		this.tokenFactory = config.tokenFactory;
 	}
 
 	public void formatHypothesis(Result<R, T> result, PrintWriter out) {
@@ -36,10 +43,10 @@ public class BasicHypothesisFormatter<R extends GrammarRule<T>, T extends Token>
 			// including recombined ambiguities)
 
 			TreeFormatter<T> formatter =
-					new BasicTreeFormatter<T>(tokenFactory, true, true, scorer, true);
+					new BasicTreeFormatter<T>(tokenFactory, true, true, scorer, true, true);
 
-			DecoderHypothesis<T> hyp = result.nBestList.get(i);
-			List<T> hypTokens = hyp.getTokens();
+			PartialParse<T> hyp = result.nBestList.get(i);
+			List<T> hypTokens = hyp.getTargetTokens();
 			// remove <s> and </s>
 			assert hypTokens.size() >= 2;
 			hypTokens = hypTokens.subList(1, hypTokens.size() - 1);
@@ -62,17 +69,27 @@ public class BasicHypothesisFormatter<R extends GrammarRule<T>, T extends Token>
 						+ "(" + FormatUtils.formatDouble2(logProbs[j] + weights[j]) + ")");
 			}
 			out.println();
-
-			out.println("Target parses:");
-			for (Parse<T> parse : hyp.getParses()) {
+			
+			out.println(hyp.getSourceTree().toString(formatter));
+			out.println();
+			out.println(hyp.getTargetTree().toString(formatter));
+			
+			out.println("Recombined parses:");
+			for (PartialParse<T> parse : hyp.getRecombinedParses()) {
 				out.println("( " + parse.getStartIndex() + " " + parse.getEndIndex() + " "
 						+ parse.getTargetTree().toString(formatter) + ")");
 			}
-			out.println("Source parses:");
-			for (Parse<T> parse : hyp.getParses()) {
-				out.println("( " + parse.getStartIndex() + " " + parse.getEndIndex() + " "
-						+ parse.getSourceTree().toString(formatter) + ")");
-			}
+
+//			out.println("Target parses:");
+//			for (PartialParse<T> parse : hyp.get) {
+//				out.println("( " + parse.getStartIndex() + " " + parse.getEndIndex() + " "
+//						+ parse.getTargetTree().toString(formatter) + ")");
+//			}
+//			out.println("Source parses:");
+//			for (PartialParse<T> parse : hyp.getParses()) {
+//				out.println("( " + parse.getStartIndex() + " " + parse.getEndIndex() + " "
+//						+ parse.getSourceTree().toString(formatter) + ")");
+//			}
 			out.println();
 		}
 	}

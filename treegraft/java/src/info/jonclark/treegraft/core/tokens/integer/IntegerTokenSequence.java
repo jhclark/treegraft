@@ -1,5 +1,6 @@
 package info.jonclark.treegraft.core.tokens.integer;
 
+import info.jonclark.treegraft.core.tokens.TokenFactory;
 import info.jonclark.treegraft.core.tokens.TokenSequence;
 import info.jonclark.util.StringUtils;
 
@@ -31,13 +32,13 @@ public class IntegerTokenSequence implements TokenSequence<IntegerToken> {
 		}
 	}
 
-	protected IntegerTokenSequence(long[] seqs, int length) {
+	private IntegerTokenSequence(long[] seqs, int length) {
 		assert length > 0;
 		this.seqs = seqs;
 		this.length = length;
 	}
 
-	public IntegerTokenSequence(List<IntegerToken> tokens) {
+	protected IntegerTokenSequence(List<IntegerToken> tokens) {
 
 		// yes they can: packing strings
 		// if (DebugUtils.isAssertEnabled()) {
@@ -78,7 +79,14 @@ public class IntegerTokenSequence implements TokenSequence<IntegerToken> {
 		}
 	}
 
-	public List<IntegerToken> getTokens() {
+	public TokenSequence<IntegerToken> getWithSentenceMarkers(boolean bos, boolean eos) {
+		return new IntegerTokenSequence(this.seqs, this.length);
+	}
+
+	// does not return BOS and EOS markers
+	public List<IntegerToken> getContentTokens(TokenFactory<IntegerToken> tokenFactory) {
+
+		IntegerTokenFactory iTokenFactory = (IntegerTokenFactory) tokenFactory;
 
 		if (length == 0) {
 			return EMPTY_LIST;
@@ -91,7 +99,8 @@ public class IntegerTokenSequence implements TokenSequence<IntegerToken> {
 			long seqID = seqs[i];
 			for (int k = 0; k < WORDS_PER_LONG; k++) {
 				int tokID = (int) (seqID & masks[1]);
-				tokens.add(new IntegerToken(tokID, true));
+				String word = iTokenFactory.getStringFromId(tokID);
+				tokens.add(new IntegerToken(word, tokID, true));
 				seqID >>= BITS_PER_WORD;
 			}
 		}
@@ -104,166 +113,18 @@ public class IntegerTokenSequence implements TokenSequence<IntegerToken> {
 		long seqID = seqs[seqs.length - 1];
 		for (int k = 0; k < nToksInLastLong; k++) {
 			int tokID = (int) (seqID & masks[1]);
-			tokens.add(new IntegerToken(tokID, true));
+			String word = iTokenFactory.getStringFromId(tokID);
+			tokens.add(new IntegerToken(word, tokID, true));
 			seqID >>= BITS_PER_WORD;
 		}
 
 		return tokens;
 	}
 
-	// private int get16bits(int idx, int ptr) {
-	// return (int) (seqs[idx] >> ptr);
-	// }
-	//
-	// private int get8bits(int idx, int ptr) {
-	// return (byte) (seqs[idx] >> ptr);
-	// }
-	//
-	// // from http://www.azillionmonkeys.com/qed/hash.html
-	// public int hashCode() {
-	//
-	// // length in "characters" (8-bit segments)
-	// // 8 8-bit characters can fit in one 64-bit long
-	// int len = seqs.length * 8;
-	// int hash = len;
-	// int tmp;
-	// int rem;
-	//
-	// int idx = 0;
-	// int ptr = 0;
-	//
-	// if (len <= 0 || seqs == null)
-	// return 0;
-	//
-	// rem = len & 3;
-	// len >>= 2;
-	//
-	// /* Main loop */
-	// for (; len > 0; len--) {
-	// hash += get16bits(idx, ptr);
-	// tmp = (get16bits(idx, ptr + 2) << 11) ^ hash;
-	// hash = (hash << 16) ^ tmp;
-	//
-	// // advance pointer in array by 4 bytes
-	// // data += 2*sizeof (uint16_t);
-	// if (ptr == 0) {
-	// ptr += 32;
-	// } else {
-	// ptr = 0;
-	// idx++;
-	// }
-	// hash += hash >> 11;
-	// }
-	//
-	// /* Handle end cases */
-	// switch (rem) {
-	// case 3:
-	// hash += get16bits(idx, ptr);
-	// hash ^= hash << 16;
-	// hash ^= get8bits(idx, 2) << 18;
-	// // hash ^= data[sizeof(uint16_t)] << 18;
-	// hash += hash >> 11;
-	// break;
-	// case 2:
-	// hash += get16bits(idx, ptr);
-	// hash ^= hash << 11;
-	// hash += hash >> 17;
-	// break;
-	// case 1:
-	// // add current "character"
-	// // hash += *data;
-	// hash += get8bits(idx, 2);
-	// hash ^= hash << 10;
-	// hash += hash >> 1;
-	// }
-	//
-	// /* Force "avalanching" of final 127 bits */
-	// hash ^= hash << 3;
-	// hash += hash >> 5;
-	// hash ^= hash << 4;
-	// hash += hash >> 17;
-	// hash ^= hash << 25;
-	// hash += hash >> 6;
-	//
-	// return hash;
-	// }
-
-	// public int hashCode() {
-	// if (hash == -1) {
-	// hash = 0;
-	// for (int i = 0; i < seqs.length; i++) {
-	//
-	// // calculate tokenHash^i
-	// // long seqHash = seqs[i];
-	// // long pow = seqHash;
-	// // for (int j = 1; j < i; j++) {
-	// // pow *= seqHash;
-	// // }
-	// // hash += pow;
-	// hash ^= seqs[i];
-	// }
-	// }
-	// return hash;
-	// }
-
-	// public int hashCode() {
-	// if (hash == -1) {
-	// hash = 0;
-	// for (int i = 0; i < seqs.length; i++) {
-	//
-	// // calculate tokenHash^i
-	// long seqHash = seqs[i];
-	// int pow = 0;
-	// for (int j = 1; j < i; j++) {
-	// pow *= (int) seqHash;
-	// pow *= (int) (seqHash >> 32);
-	// }
-	// hash ^= pow;
-	// // int mixOffset = 7 * i;
-	// // hash ^= seqs[i] << mixOffset ^ seqs[i] >> (32 - mixOffset);
-	// }
-	// }
-	// return hash;
-	// }
-	//
-
-	// return hash;
-	// }
-
-	// public int hashCode() {
-	// int hash = 0;
-	//
-	// for (int i = 0; i < seqs.length; i++) {
-	//
-	// // taken from phramer...
-	// long key = seqs[i];
-	// int h = (int) (key ^ (key >>> 32));
-	// h += ~(h << 9);
-	// h ^= (h >>> 14);
-	// h += (h << 4);
-	// h ^= (h >>> 10);
-	//
-	// hash ^= h;
-	// hash += ~(hash << 5);
-	// hash ^= (hash >>> 13);
-	// hash += (hash << 29);
-	// hash ^= (hash >>> 7);
-	// }
-	//
-	// return hash;
-	// }
-
-	// public int hashCode() {
-	// for (int i = 0; i < seqs.length; i++) {
-	// hash ^= (int) seqs[i] ^ (int) (seqs[i] >>> 32);
-	// }
-	// return hash;
-	// }
-
 	public int hashCode() {
 
 		if (hash == -1) {
-			
+
 			for (int i = 0; i < seqs.length; i++) {
 				hash ^= (int) seqs[i] ^ (int) (seqs[i] >>> 32);
 			}
@@ -360,7 +221,8 @@ public class IntegerTokenSequence implements TokenSequence<IntegerToken> {
 
 			int nCutPerLong = (length - n) % WORDS_PER_LONG;
 			int nRemainingPerLong = WORDS_PER_LONG - nCutPerLong;
-			int nOriginallyInLastLong = length - (seqs.length - 1) * WORDS_PER_LONG;
+			// int nOriginallyInLastLong = length - (seqs.length - 1) *
+			// WORDS_PER_LONG;
 
 			if (DEBUG) {
 				System.out.print("OLD: ");
@@ -432,21 +294,72 @@ public class IntegerTokenSequence implements TokenSequence<IntegerToken> {
 	}
 
 	public TokenSequence<IntegerToken> append(TokenSequence<IntegerToken> suffix) {
-		// TODO: Optimize this!!!!
-		List<IntegerToken> list = this.getTokens();
-		list.addAll(suffix.getTokens());
-		IntegerTokenSequence seq = new IntegerTokenSequence(list);
-		return seq;
+
+		IntegerTokenSequence iSuffix = (IntegerTokenSequence) suffix;
+		int newLength = this.size() + suffix.size();
+		int nLongsRequired = newLength / WORDS_PER_LONG + (newLength % WORDS_PER_LONG == 0 ? 0 : 1);
+		int nRemainingInThis = this.length % WORDS_PER_LONG;
+		if(nRemainingInThis == 0)
+			nRemainingInThis = WORDS_PER_LONG;
+		int nUnoccupiedInThis = WORDS_PER_LONG - nRemainingInThis;
+
+		long[] newSeqs = new long[nLongsRequired];
+		System.arraycopy(this.seqs, 0, newSeqs, 0, this.seqs.length);
+
+		if (DEBUG) {
+			System.out.print("OLD: ");
+			for (long x : newSeqs)
+				System.out.print(str(x) + " - ");
+			System.out.println();
+		}
+
+		if (nUnoccupiedInThis == 0) {
+
+			// we can just concatenate the array from the suffix without
+			// shifting
+			System.arraycopy(iSuffix.seqs, 0, newSeqs, this.seqs.length, iSuffix.seqs.length);
+			return new IntegerTokenSequence(newSeqs, newLength);
+
+		} else {
+
+			// we have to shift part of the appended sequence into the
+			// unoccupied positions in the current sequence to which we are
+			// appending
+
+			int offset = this.seqs.length - 1;
+			for (int i = 0; i < iSuffix.seqs.length; i++) {
+
+				// shift the right-most tokens and concatenate them onto the
+				// previous long to fill the unused token slots
+				newSeqs[i + offset] |= (iSuffix.seqs[i] << nRemainingInThis * BITS_PER_WORD);
+
+				if (DEBUG) {
+					System.out.print("NEW1: ");
+					for (long x : newSeqs)
+						System.out.print(str(x) + " - ");
+					System.out.println();
+				}
+
+				// take the remaining left-most tokens (if any) and put them in
+				// the next array position
+				if (i + offset + 1 < newSeqs.length)
+					newSeqs[i + offset + 1] |=
+							(iSuffix.seqs[i] >>> nUnoccupiedInThis * BITS_PER_WORD);
+
+				if (DEBUG) {
+					System.out.print("NEW2: ");
+					for (long x : newSeqs)
+						System.out.print(str(x) + " - ");
+					System.out.println();
+				}
+			}
+
+			return new IntegerTokenSequence(newSeqs, newLength);
+		}
 	}
 
 	public static void getBitSequence(TokenSequence<IntegerToken> sequence, long[] bits) {
 		IntegerTokenSequence seq = (IntegerTokenSequence) sequence;
 		System.arraycopy(seq.seqs, 0, bits, 0, Math.min(seq.seqs.length, bits.length));
-	}
-
-	public IntegerToken get(int i) {
-		// TODO: Maybe optimize this?
-		// or just remove get method...
-		return this.getTokens().get(i);
 	}
 }

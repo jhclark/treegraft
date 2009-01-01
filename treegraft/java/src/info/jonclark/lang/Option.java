@@ -31,5 +31,7 @@ public @interface Option {
 	 * For options with array data types, the delimiter that separates the entries of the array
 	 * @return
 	 */
-	String delim() default " ";
+	String arrayDelim() default " \t\n";
+	
+	String pairDelim() default ":";
 }

@@ -3,6 +3,7 @@ package info.jonclark.treegraft.parsing.synccfg;
 import info.jonclark.treegraft.core.featureimpl.RuleScore;
 import info.jonclark.treegraft.core.tokens.Token;
 import info.jonclark.treegraft.core.tokens.TokenFactory;
+import info.jonclark.treegraft.parsing.monocfg.MonoCFGRuleTransducer;
 import info.jonclark.treegraft.parsing.rules.RuleException;
 import info.jonclark.treegraft.parsing.rules.RuleFactory;
 import info.jonclark.treegraft.parsing.transduction.Transducer;
@@ -46,5 +47,20 @@ public class SyncCFGRuleFactory<T extends Token> implements RuleFactory<SyncCFGR
 
 	public Transducer<SyncCFGRule<T>, T> getTransducer() {
 		return new SyncCFGRuleTransducer<T>();
+	}
+
+	public SyncCFGRule<T> makeGlueRule(T label, T[] sourceRhs, T[] targetRhs) {
+		try {
+			return new SyncCFGRule<T>(label, sourceRhs, label, targetRhs, label.getId(),
+					MonoCFGRuleTransducer.getMonotonicAlignment(sourceRhs.length),
+					RuleScore.DEFAULT_RULE_SCORE, new Constraint[0], "none", 0, tokenFactory);
+		} catch (RuleException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	public SyncCFGRule<T> makeGlueRule(T label, T[] sourceRhs, T[] targetRhs,
+			int[] sourceToTargetAlignment) {
+		throw new Error("Umimplemented");
 	}
 }

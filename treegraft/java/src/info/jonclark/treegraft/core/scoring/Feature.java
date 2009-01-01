@@ -1,9 +1,10 @@
 package info.jonclark.treegraft.core.scoring;
 
+import info.jonclark.treegraft.core.Plugin;
 import info.jonclark.treegraft.core.tokens.Token;
 import info.jonclark.treegraft.core.tokens.TokenSequence;
 import info.jonclark.treegraft.decoder.DecoderHypothesis;
-import info.jonclark.treegraft.parsing.parses.Parse;
+import info.jonclark.treegraft.parsing.parses.PartialParse;
 import info.jonclark.treegraft.parsing.rules.GrammarRule;
 
 import java.util.List;
@@ -20,18 +21,20 @@ import java.util.List;
  * All implementations of Feature must specify the OptionsTarget annotation,
  * which corresponds to the type of the first constructor argument.
  */
-public interface Feature<R extends GrammarRule<T>, T extends Token, S extends FeatureScore> {
+public interface Feature<R extends GrammarRule<T>, T extends Token, S extends FeatureScore> extends
+		Plugin<R, T> {
 
-	public S combineRuleScoreWithChildren(Parse<T> parse, S parseScore, R ruleToAppend,
+	public S combineRuleScoreWithChildren(PartialParse<T> parse, S parseScore, R ruleToAppend,
 			List<T> inputSentence);
 
 	public S getInitialScore();
 
-	public S combineChildParseScores(Parse<T> accumulatedParse, TokenSequence<T> accumulatedSeq,
-			S accumulatedScore, Parse<T> addedChild, TokenSequence<T> addedSeq, S addedScore,
-			TokenSequence<T> combinedSeq, List<T> inputSentence);
+	public S combineChildParseScores(PartialParse<T> accumulatedParse,
+			TokenSequence<T> accumulatedSeq, S accumulatedScore, PartialParse<T> addedChild,
+			TokenSequence<T> addedSeq, S addedScore, TokenSequence<T> combinedSeq,
+			List<T> inputSentence);
 
-	public S scoreTerminalParse(Parse<T> terminalParse, TokenSequence<T> seq);
+	public S scoreTerminalParse(PartialParse<T> terminalParse, TokenSequence<T> seq);
 
 	public S combineHypotheses(DecoderHypothesis<T> hyp1, TokenSequence<T> tokensFromHyp1,
 			S scoreFromHyp1, DecoderHypothesis<T> hyp2, TokenSequence<T> tokensFromHyp2,

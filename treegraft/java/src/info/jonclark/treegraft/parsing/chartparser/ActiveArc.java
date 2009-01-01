@@ -2,7 +2,6 @@ package info.jonclark.treegraft.parsing.chartparser;
 
 import info.jonclark.log.LogUtils;
 import info.jonclark.treegraft.core.tokens.Token;
-import info.jonclark.treegraft.core.tokens.TokenFactory;
 import info.jonclark.treegraft.core.tokens.TokenSequence;
 import info.jonclark.treegraft.parsing.rules.GrammarRule;
 
@@ -332,14 +331,13 @@ public class ActiveArc<R extends GrammarRule<T>, T extends Token> {
 	 * A string representation of this <code>ActiveArc</code> that includes the
 	 * source-side constituents that have been completed, a dot, and the
 	 * source-side constituents that are still waiting to be completed along
-	 * with the zero-based start and end indices for this arc; Tokens will have
-	 * only their ID shown.
+	 * with the zero-based start and end indices for this arc.
 	 * 
 	 * @return a string representation of this object
 	 */
 	public String toString() {
 		StringBuilder builder = new StringBuilder();
-		builder.append(getLhs().getId());
+		builder.append(getLhs().getWord());
 
 		T[] rhs = getRhs();
 		if (rhs.length > 0) {
@@ -350,37 +348,7 @@ public class ActiveArc<R extends GrammarRule<T>, T extends Token> {
 			if (i == getDot()) {
 				builder.append("* ");
 			}
-			builder.append(rhs[i].getId() + " ");
-		}
-		if (rhs.length == getDot()) {
-			builder.append("* ");
-		}
-		return "[" + builder.toString() + "] (" + getStartIndex() + "," + getEndIndex() + ")";
-	}
-
-	/**
-	 * A string representation of this <code>ActiveArc</code> that includes the
-	 * source-side constituents that have been completed, a dot, and the
-	 * source-side constituents that are still waiting to be completed along
-	 * with the zero-based start and end indices for this arc. Tokens will be
-	 * resolved to their string form via the provided <code>TokenFactory</code>.
-	 * 
-	 * @return a string representation of this object
-	 */
-	public String toString(TokenFactory<T> symbolFactory) {
-		StringBuilder builder = new StringBuilder();
-		builder.append(symbolFactory.getTokenAsString(getLhs()));
-
-		T[] rhs = getRhs();
-		if (rhs.length > 0) {
-			builder.append(" -> ");
-		}
-
-		for (int i = 0; i < rhs.length; i++) {
-			if (i == getDot()) {
-				builder.append("* ");
-			}
-			builder.append(symbolFactory.getTokenAsString(rhs[i]) + " ");
+			builder.append(rhs[i].getWord() + " ");
 		}
 		if (rhs.length == getDot()) {
 			builder.append("* ");

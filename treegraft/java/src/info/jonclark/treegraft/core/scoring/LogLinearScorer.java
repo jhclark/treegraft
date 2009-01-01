@@ -9,7 +9,7 @@ import info.jonclark.treegraft.core.tokens.Token;
 import info.jonclark.treegraft.core.tokens.TokenFactory;
 import info.jonclark.treegraft.core.tokens.TokenSequence;
 import info.jonclark.treegraft.decoder.DecoderHypothesis;
-import info.jonclark.treegraft.parsing.parses.Parse;
+import info.jonclark.treegraft.parsing.parses.PartialParse;
 import info.jonclark.treegraft.parsing.rules.GrammarRule;
 
 import java.util.List;
@@ -27,17 +27,17 @@ public class LogLinearScorer<R extends GrammarRule<T>, T extends Token> implemen
 	private static final Logger log = LogUtils.getLogger();
 
 	private ProfilerTimer[] featureHypCombineTimers;
-	
+
 	public static class LogLinearScorerOptions implements Options {
-		
+
 	}
 
-	public LogLinearScorer(LogLinearScorerOptions opts, TreegraftConfig config) {
-		
-//		Feature[] decoderFeatures, TokenFactory<T> tokenFactory,
-//		ProfilerTimer parent
-		
-		this.features = config.features;
+	public LogLinearScorer(LogLinearScorerOptions opts, TreegraftConfig<R, T> config) {
+
+		// Feature[] decoderFeatures, TokenFactory<T> tokenFactory,
+		// ProfilerTimer parent
+
+		this.features = config.features.toArray(new Feature[config.features.size()]);
 		this.tokenFactory = config.tokenFactory;
 
 		this.initialScores = new FeatureScores(features.length);
@@ -54,7 +54,7 @@ public class LogLinearScorer<R extends GrammarRule<T>, T extends Token> implemen
 	 * (non-Javadoc)
 	 * @see info.jonclark.treegraft.core.scoring.Scorer#scoreTerminalToken(T)
 	 */
-	public FeatureScores scoreTerminalParse(Parse<T> terminalParse) {
+	public FeatureScores scoreTerminalParse(PartialParse<T> terminalParse) {
 
 		TokenSequence<T> seq = tokenFactory.makeTokenSequence(terminalParse.getTargetTokens());
 
@@ -80,8 +80,8 @@ public class LogLinearScorer<R extends GrammarRule<T>, T extends Token> implemen
 	 * info.jonclark.treegraft.core.scoring.Scorer#combineRuleScoreWithChildren
 	 * (info.jonclark.treegraft.core.parses.Parse, R)
 	 */
-	public FeatureScores combineRuleScoreWithChildren(Parse<T> currentLogProb, R ruleToAppend,
-			List<T> inputSentence) {
+	public FeatureScores combineRuleScoreWithChildren(PartialParse<T> currentLogProb,
+			R ruleToAppend, List<T> inputSentence) {
 
 		FeatureScores combinedScores = new FeatureScores(features.length);
 		double interpolated = ZERO;
@@ -108,8 +108,8 @@ public class LogLinearScorer<R extends GrammarRule<T>, T extends Token> implemen
 	 * .jonclark.treegraft.core.parses.Parse,
 	 * info.jonclark.treegraft.core.parses.Parse)
 	 */
-	public FeatureScores combineChildParseScores(Parse<T> accumulatedParse, Parse<T> addedChild,
-			List<T> inputSentence) {
+	public FeatureScores combineChildParseScores(PartialParse<T> accumulatedParse,
+			PartialParse<T> addedChild, List<T> inputSentence) {
 
 		TokenSequence<T> accumulatedSeq =
 				tokenFactory.makeTokenSequence(accumulatedParse.getTargetTokens());
@@ -143,7 +143,7 @@ public class LogLinearScorer<R extends GrammarRule<T>, T extends Token> implemen
 	 * info.jonclark.treegraft.core.scoring.Scorer#recombineParses(info.jonclark
 	 * .treegraft.core.parses.Parse, info.jonclark.treegraft.core.parses.Parse)
 	 */
-	public FeatureScores recombineParses(Parse<T> a, Parse<T> b) {
+	public FeatureScores recombineParses(PartialParse<T> a, PartialParse<T> b) {
 
 		// take sum of recombined parses IFF we kept both
 		// the ParseRecombiner has the option the throw away

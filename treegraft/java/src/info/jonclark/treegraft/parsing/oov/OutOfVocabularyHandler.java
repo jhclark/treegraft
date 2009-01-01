@@ -1,5 +1,6 @@
 package info.jonclark.treegraft.parsing.oov;
 
+import info.jonclark.treegraft.core.Plugin;
 import info.jonclark.treegraft.core.tokens.Token;
 import info.jonclark.treegraft.parsing.rules.GrammarRule;
 import info.jonclark.treegraft.parsing.rules.RuleException;
@@ -7,8 +8,9 @@ import info.jonclark.treegraft.parsing.rules.RuleException;
 import java.util.HashSet;
 import java.util.List;
 
-public interface OutOfVocabularyHandler<R extends GrammarRule<T>, T extends Token> {
-	
+public interface OutOfVocabularyHandler<R extends GrammarRule<T>, T extends Token> extends
+		Plugin<R, T> {
+
 	public List<R> generateOOVRules(T sourceOovTerminal, List<T> sourceInputBeforeOovTerminal)
 			throws RuleException;
 

@@ -1,7 +1,9 @@
 package info.jonclark.treegraft.core.lm;
 
+import info.jonclark.lang.Options;
+import info.jonclark.lang.OptionsTarget;
 import info.jonclark.lang.trie.Trie;
-import info.jonclark.stat.ProfilerTimer;
+import info.jonclark.treegraft.Treegraft.TreegraftConfig;
 import info.jonclark.treegraft.core.tokens.Token;
 import info.jonclark.treegraft.core.tokens.TokenSequence;
 import info.jonclark.treegraft.core.tokens.string.StringToken;
@@ -15,6 +17,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
+@OptionsTarget(SimpleNGramLanguageModel.SimpleNGramLanguageModelOptions.class)
 public class SimpleNGramLanguageModel<T extends Token> extends AbstractNGramLanguageModel<T> {
 
 	private static class LMEntry {
@@ -32,9 +35,14 @@ public class SimpleNGramLanguageModel<T extends Token> extends AbstractNGramLang
 	public static final boolean TRIE_MODE = false;
 	private Map<TokenSequence<T>, LMEntry>[] probs;
 	private Trie<TokenSequence<T>, T, LMEntry> trie;
+	
+	public static class SimpleNGramLanguageModelOptions implements Options {
 
-	public SimpleNGramLanguageModel(ProfilerTimer parentTimer) {
-		super(parentTimer);
+	}
+
+	public SimpleNGramLanguageModel(SimpleNGramLanguageModelOptions opts,
+			TreegraftConfig<?, T> config) {
+		super(config.bos, config.eos, config.tokenFactory, config.profiler.featureTimer);
 	}
 
 	public void setOrder(int order, int[] expectedItems) {
@@ -146,52 +154,52 @@ public class SimpleNGramLanguageModel<T extends Token> extends AbstractNGramLang
 		return scoredToken;
 	}
 
-	public static void main(String[] args) throws Exception {
-
-//		File file = new File(args[0]);
-		File file = new File("/Users/jon/Downloads/2-trainA.txt(3).arpa");
-		String sent = args[1];
-		String a = StringUtils.substringBefore(sent, " ");
-		String b = StringUtils.substringAfter(sent, " ");
-
-		StringTokenFactory tokenFactory = new StringTokenFactory();
-		ARPALanguageModelLoader<StringToken> loader = new ARPALanguageModelLoader<StringToken>();
-		SimpleNGramLanguageModel<StringToken> lm = new SimpleNGramLanguageModel<StringToken>(null);
-		loader.loadLM(lm, tokenFactory, new FileInputStream(file), "UTF8", null, null);
-
-		// String a =
-		// ", sheikh mohammad confirmed that , in the interview that that focused on two files of iraq and"
-		// ;
-		// String b =
-		// "arab - israeli conflict \" importance of resorting to dispute resolution . and peacefully resolving problems away from violence and the arms race and double standards a guarantee to reinforce the right , providing justice and freedom of all peoples \" according to the emirates news agency ."
-		// ;
-
-		// String a = "given";
-		// String b =
-		// "award zayed international environment that fired year 1998 name state founder united arab emirates sheik zayed bin sultan of nahyan , two people known in defense on environment . total value لجوائزها million dollars ."
-		// ;
-
-		StringTokenSequence seq1 =
-				new StringTokenSequence(Arrays.asList(tokenFactory.makeTokens(
-						StringUtils.tokenize(a), true)));
-		StringTokenSequence seq2 =
-				new StringTokenSequence(Arrays.asList(tokenFactory.makeTokens(
-						StringUtils.tokenize(b), true)));
-		TokenSequence<StringToken> seqAll = seq1.append(seq2);
-
-		// LanguageModelScore score1 = lm.scoreSequence(seq1);
-		// System.out.println(score1.getSequenceScore());
-		//
-		// LanguageModelScore score2 = lm.scoreSequence(seq2);
-		// System.out.println(score2.getSequenceScore());
-		//
-		// LanguageModelScore scoreCombined =
-		// lm.scoreBoundaryAndCombine(seq1, score1, seq2, score2, seqAll);
-		// System.out.println(scoreCombined.getSequenceScore());
-
-		LanguageModelScore scoreAll = lm.scoreSequence(seqAll);
-		System.out.println(scoreAll.getSequenceScore());
-	}
+//	public static void main(String[] args) throws Exception {
+//
+////		File file = new File(args[0]);
+//		File file = new File("/Users/jon/Downloads/2-trainA.txt(3).arpa");
+//		String sent = args[1];
+//		String a = StringUtils.substringBefore(sent, " ");
+//		String b = StringUtils.substringAfter(sent, " ");
+//
+//		StringTokenFactory tokenFactory = new StringTokenFactory();
+//		ARPALanguageModelLoader<StringToken> loader = new ARPALanguageModelLoader<StringToken>();
+//		SimpleNGramLanguageModel<StringToken> lm = new SimpleNGramLanguageModel<StringToken>();
+//		loader.loadLM(lm, tokenFactory, new FileInputStream(file), "UTF8", null, null);
+//
+//		// String a =
+//		// ", sheikh mohammad confirmed that , in the interview that that focused on two files of iraq and"
+//		// ;
+//		// String b =
+//		// "arab - israeli conflict \" importance of resorting to dispute resolution . and peacefully resolving problems away from violence and the arms race and double standards a guarantee to reinforce the right , providing justice and freedom of all peoples \" according to the emirates news agency ."
+//		// ;
+//
+//		// String a = "given";
+//		// String b =
+//		// "award zayed international environment that fired year 1998 name state founder united arab emirates sheik zayed bin sultan of nahyan , two people known in defense on environment . total value لجوائزها million dollars ."
+//		// ;
+//
+//		StringTokenSequence seq1 =
+//				new StringTokenSequence(Arrays.asList(tokenFactory.makeTokens(
+//						StringUtils.tokenize(a), true)));
+//		StringTokenSequence seq2 =
+//				new StringTokenSequence(Arrays.asList(tokenFactory.makeTokens(
+//						StringUtils.tokenize(b), true)));
+//		TokenSequence<StringToken> seqAll = seq1.append(seq2);
+//
+//		// LanguageModelScore score1 = lm.scoreSequence(seq1);
+//		// System.out.println(score1.getSequenceScore());
+//		//
+//		// LanguageModelScore score2 = lm.scoreSequence(seq2);
+//		// System.out.println(score2.getSequenceScore());
+//		//
+//		// LanguageModelScore scoreCombined =
+//		// lm.scoreBoundaryAndCombine(seq1, score1, seq2, score2, seqAll);
+//		// System.out.println(scoreCombined.getSequenceScore());
+//
+//		LanguageModelScore scoreAll = lm.scoreSequence(seqAll);
+//		System.out.println(scoreAll.getSequenceScore());
+//	}
 
 	public String getMetaInfo() {
 		return "";

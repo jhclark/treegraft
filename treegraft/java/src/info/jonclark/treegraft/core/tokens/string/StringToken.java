@@ -62,11 +62,15 @@ public class StringToken implements Token {
 	public int compareTo(Token o) {
 		return this.hashCode() - o.hashCode();
 	}
-	
+
 	/**
 	 * {@inheritDoc}
 	 */
 	public String toString() {
+		return str;
+	}
+
+	public String getWord() {
 		return str;
 	}
 }

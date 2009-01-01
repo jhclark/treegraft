@@ -1,6 +1,10 @@
 package info.jonclark.treegraft.decoder;
 
+import info.jonclark.lang.Option;
+import info.jonclark.lang.Options;
+import info.jonclark.lang.OptionsTarget;
 import info.jonclark.stat.ProfilerTimer;
+import info.jonclark.treegraft.Treegraft.TreegraftConfig;
 import info.jonclark.treegraft.core.scoring.Scorer;
 import info.jonclark.treegraft.core.search.Beam;
 import info.jonclark.treegraft.core.tokens.Token;
@@ -9,12 +13,14 @@ import info.jonclark.treegraft.parsing.chartparser.Chart;
 import info.jonclark.treegraft.parsing.chartparser.Key;
 import info.jonclark.treegraft.parsing.forestunpacking.ForestUnpacker;
 import info.jonclark.treegraft.parsing.merging.Merger;
-import info.jonclark.treegraft.parsing.parses.Parse;
+import info.jonclark.treegraft.parsing.parses.ParseFactory;
+import info.jonclark.treegraft.parsing.parses.PartialParse;
 import info.jonclark.treegraft.parsing.rules.GrammarRule;
 
 import java.util.ArrayList;
 import java.util.List;
 
+@OptionsTarget(NaiveBeamSearchDecoder.NaiveBeamSearchDecoderOptions.class)
 public class NaiveBeamSearchDecoder<R extends GrammarRule<T>, T extends Token> {
 
 	private final TokenFactory<T> tokenFactory;
@@ -23,13 +29,18 @@ public class NaiveBeamSearchDecoder<R extends GrammarRule<T>, T extends Token> {
 	private final ProfilerTimer decoderTimer;
 	private final ProfilerTimer combineTimer;
 
-	public NaiveBeamSearchDecoder(TokenFactory<T> tokenFactory, Scorer<R, T> scorer,
-			Merger<R, T> merger, ProfilerTimer decoderTimer) {
+	public static class NaiveBeamSearchDecoderOptions implements Options {
 
-		this.tokenFactory = tokenFactory;
-		this.scorer = scorer;
-		this.merger = merger;
-		this.decoderTimer = decoderTimer;
+		@Option(name = "decoder.nBest", usage = "Number of highest ranking hypotheses to return from the decoding process")
+		public int nBest;
+	}
+
+	public NaiveBeamSearchDecoder(NaiveBeamSearchDecoderOptions opts, TreegraftConfig<R, T> config) {
+
+		this.tokenFactory = config.tokenFactory;
+		this.scorer = config.scorer;
+		this.merger = config.merger;
+		this.decoderTimer = config.profiler.decoderTimer;
 		this.combineTimer = ProfilerTimer.newTimer("combine-hypotheses", decoderTimer, true, false);
 	}
 
@@ -61,17 +72,17 @@ public class NaiveBeamSearchDecoder<R extends GrammarRule<T>, T extends Token> {
 		return beams;
 	}
 
-	private void seedBeamsWithPartialParses(Chart<R, T> chart, ForestUnpacker<R, T> unpacker,
-			Beam<DecoderHypothesis<T>>[][] beams) {
+	private void seedBeamsWithPartialParses(Lattice<R, T> lattice, ParseFactory<R, T> parseFactory) {
 
 		// for each source key, keep a beam of the best hypotheses that it can
 		// create each backpointer from higher-level keys will have access to
 		// only the partial parses in that beam
 		for (Key<R, T> key : chart.getKeys()) {
-			List<Parse<T>> partialParses = unpacker.getPartialParses(key);
-			for (Parse<T> parse : partialParses) {
+			List<PartialParse<T>> partialParses =
+					unpacker.getPartialParses(key, lattice.getSourceInputTokens(), parseFactory);
+			for (PartialParse<T> parse : partialParses) {
 
-				ArrayList<Parse<T>> singleParseList = new ArrayList<Parse<T>>(1);
+				ArrayList<PartialParse<T>> singleParseList = new ArrayList<PartialParse<T>>(1);
 				singleParseList.add(parse);
 
 				// create a hypothesis for each partial parse coming out of the
@@ -106,8 +117,8 @@ public class NaiveBeamSearchDecoder<R extends GrammarRule<T>, T extends Token> {
 					Beam<DecoderHypothesis<T>> beam2 = beams[input2Start][input2End];
 
 					combineTimer.go();
-					merger.combineCrossProductOfHypotheses(scorer, beam1, beam2,
-							outputBeam, chart.getSourceInputTokens());
+					merger.combineCrossProductOfHypotheses(scorer, beam1, beam2, outputBeam,
+							chart.getSourceInputTokens());
 					combineTimer.pause();
 
 					// System.out.println("Combined (" + input1Start + ", " +

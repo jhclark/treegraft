@@ -6,8 +6,6 @@ import info.jonclark.treegraft.parsing.rules.RuleFactory;
 import info.jonclark.treegraft.parsing.transduction.Transducer;
 import info.jonclark.treegraft.parsing.unification.Constraint;
 
-import java.io.File;
-
 /**
  * A means for handling on-the-fly creation of dummy rules for terminal symbols
  * during the parsing process and for defining how partial parse output should
@@ -41,5 +39,22 @@ public class MonoCFGRuleFactory<T extends Token> implements RuleFactory<MonoCFGR
 
 	public Transducer<MonoCFGRule<T>, T> getTransducer() {
 		return new MonoCFGRuleTransducer<T>();
+	}
+
+	public MonoCFGRule<T> makeGlueRule(T label, int length) {
+		throw new Error("Umimplemented");
+	}
+
+	public MonoCFGRule<T> makeGlueRule(T label, int length, int[] sourceToTargetAlignment) {
+		throw new Error("Umimplemented");
+	}
+
+	public MonoCFGRule<T> makeGlueRule(T label, T[] sourceRhs, T[] targetRhs) {
+		throw new Error("Unimplemented");
+	}
+
+	public MonoCFGRule<T> makeGlueRule(T label, T[] sourceRhs, T[] targetRhs,
+			int[] sourceToTargetAlignment) {
+		throw new Error("Unimplemented");
 	}
 }

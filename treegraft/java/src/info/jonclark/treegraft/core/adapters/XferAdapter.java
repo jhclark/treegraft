@@ -1,5 +1,6 @@
 package info.jonclark.treegraft.core.adapters;
 
+import info.jonclark.log.LogUtils;
 import info.jonclark.util.StringUtils;
 
 import java.io.BufferedReader;
@@ -7,6 +8,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Properties;
+import java.util.logging.Logger;
 
 /**
  * Allows parses a file passed in with "-if configfile.ini" in the xfer 3.0
@@ -14,6 +16,8 @@ import java.util.Properties;
  */
 public class XferAdapter {
 	public static Properties parseConfigFile(String iniFile) throws IOException {
+
+		Logger log = LogUtils.getLogger();
 
 		Properties props = new Properties();
 
@@ -32,11 +36,12 @@ public class XferAdapter {
 		props.setProperty("lm.encoding", "UTF8");
 		props.setProperty("grammar.encoding", "UTF8");
 		props.setProperty("grammar.startSymbols", "S");
+		props.setProperty("merger.recombinerClass", "info.jonclark.treegraft.parsing.merging.BasicRecombiner");
 		props.setProperty("parser.doYieldRecombination", "true");
 		props.setProperty("decoder.doHypothesisRecombination", "true");
-		props.setProperty("transfer.latticeFile", "null");
-		props.setProperty("grammar.grammarFile", "null");
-		props.setProperty("grammar.lexiconFile", "null");
+		props.setProperty("transfer.latticeFile", "");
+		props.setProperty("grammar.grammarFile", "");
+		props.setProperty("grammar.lexiconFile", "");
 
 		props.setProperty("grammar.filterRulesWithLHS", "");
 		props.setProperty("grammar.filterRulesWithNonterminalRHS", "");
@@ -61,7 +66,7 @@ public class XferAdapter {
 		mapping.put("loadlex", "lexicon.lexiconFile");
 		mapping.put("topnode", "grammar.startSymbols");
 		mapping.put("nbest", "decoder.nBest");
-		mapping.put("progressbar", "global.progressbar.isAnimated");
+		mapping.put("progressbar", "global.progressBar.isAnimated");
 
 		// beams
 		mapping.put("latticebeam", "transfer.beamSize");
@@ -249,35 +254,40 @@ public class XferAdapter {
 			if (line.startsWith(";") || line.trim().equals("") || line.startsWith("quit"))
 				continue;
 
-			String xferParam = StringUtils.substringBefore(line, " ");
+			String[] toks = StringUtils.tokenize(line);
+			assert toks.length >= 2;
+			String xferParam = toks[0];
 			String treegraftParam = mapping.get(xferParam);
 
 			// specialized handling
 			if (xferParam.equals("smtfile") || xferParam.equals("smttrans")
-					|| xferParam.equals("smttranslate")) {
+					|| xferParam.equals("smttranslate") || xferParam.equals("smtlatticetrans")) {
 				String[] args = StringUtils.tokenize(line);
 				props.setProperty("input.file", args[1]);
-				props.setProperty("output.file", args[2]);
+				props.setProperty("output.file", args[2]
+						+ ":info.jonclark.treegraft.core.output.BasicHypothesisFormatter");
+				if(xferParam.equals("smtlatticetrans")) {
+					props.setProperty("transfer.latticeFile", args[3] + ":info.jonclark.treegraft.decoder.BasicLatticeFormatter");
+				}
 			} else if (xferParam.equals("loadonelinelex")) {
 				props.setProperty("grammar.lexiconFormat", "one-line");
 				String filename = StringUtils.substringAfter(line, " ");
-				props.setProperty("grammar.lexiconFile", filename);
-
+				props.setProperty("grammar.lexiconFile", filename + ":info.jonclark.treegraft.parsing.synccfg.OneLineLexiconGrammarLoader");
 			}
 
 			// default handling
 			if (treegraftParam == null) {
 				throw new RuntimeException("Unrecognized parameter: " + xferParam + " at line "
 						+ nLine);
-			} else if (xferParam.equals("X")) {
-				throw new RuntimeException("Unsupported xfer parameter: " + xferParam + " at line "
-						+ nLine);
+			} else if (treegraftParam.equals("X")) {
+				log.warning("Unsupported xfer parameter: " + xferParam + " at line " + nLine);
 			} else {
-				String xferArgs = StringUtils.substringAfter(line, " ").trim();
+				String xferArgs = StringUtils.untokenize(toks, 1);
 				if (xferArgs.equalsIgnoreCase("on") || xferArgs.equalsIgnoreCase("off")) {
 					xferArgs = StringUtils.replaceFast(xferArgs, "on", "true");
 					xferArgs = StringUtils.replaceFast(xferArgs, "off", "false");
 				}
+				// log.info("Setting " + treegraftParam + " to " + xferArgs);
 				props.setProperty(treegraftParam, xferArgs);
 			}
 		}

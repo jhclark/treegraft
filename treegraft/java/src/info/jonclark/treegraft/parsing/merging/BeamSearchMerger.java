@@ -13,8 +13,8 @@ import info.jonclark.treegraft.core.tokens.Token;
 import info.jonclark.treegraft.core.tokens.TokenFactory;
 import info.jonclark.treegraft.core.tokens.TokenSequence;
 import info.jonclark.treegraft.decoder.DecoderHypothesis;
-import info.jonclark.treegraft.parsing.parses.Parse;
 import info.jonclark.treegraft.parsing.parses.ParseFactory;
+import info.jonclark.treegraft.parsing.parses.PartialParse;
 import info.jonclark.treegraft.parsing.parses.Tree;
 import info.jonclark.treegraft.parsing.rules.GrammarRule;
 import info.jonclark.treegraft.parsing.transduction.Transducer;
@@ -42,9 +42,11 @@ public class BeamSearchMerger<R extends GrammarRule<T>, T extends Token> impleme
 	private final ProfilerTimer featureCombinationTimer;
 
 	public static class BeamSearchMergerOptions implements Options {
-		@Option(name = "parser.doYieldRecombination", usage = "Should hypotheses that are equivalent according to the model be recombined during transfer search?")
-		public boolean doParseYieldRecombination;
+		@Option(name = "merger.recombinerClass", usage = "The fully-qualified Java class to be used for determining if two hypotheses can be recombined.")
+		public Class<? extends Recombiner> recombiner;
 
+		// TODO: Remove decoder recombination along with the DecoderHypothesis
+		// class and the combineHypotheses method
 		@Option(name = "decoder.doHypothesisRecombination", usage = "Should hypotheses that are equivalent according to the model be recombined during decoder search?")
 		public boolean doHypothesisRecombination;
 
@@ -57,7 +59,7 @@ public class BeamSearchMerger<R extends GrammarRule<T>, T extends Token> impleme
 	private final BeamSearchMergerOptions opts;
 
 	private static final Logger log = LogUtils.getLogger();
-	
+
 	public BeamSearchMerger(BeamSearchMergerOptions opts, TreegraftConfig<R, T> config) {
 
 		this.opts = opts;
@@ -72,17 +74,19 @@ public class BeamSearchMerger<R extends GrammarRule<T>, T extends Token> impleme
 				ProfilerTimer.newTimer("featureCombination", parentTimer, true, false);
 	}
 
-	public List<Parse<T>> combineCrossProductOfParses(R parentRule, List<T> sourceInputTokens,
-			int startIndex, int endIndex, List<Parse<T>>[] parses, Scorer<R, T> scorer,
-			Transducer<R, T> transducer, List<T> sourceTokens, ParseFactory<R, T> parseFactory) {
+	public List<PartialParse<T>> combineCrossProductOfChildParses(R parentRule,
+			List<T> sourceInputTokens, int startIndex, int endIndex, Scorer<R, T> scorer,
+			Transducer<R, T> transducer, ParseFactory<R, T> parseFactory,
+			List<PartialParse<T>>... childParses) {
 
 		// create a blank parse containing the LHS and any source terminals
-		List<Parse<T>> currentResultParses = new Beam<Parse<T>>(opts.transferBeam);
+		List<PartialParse<T>> currentResultParses = new Beam<PartialParse<T>>(opts.transferBeam);
 		T sourceLhs = parentRule.getLhs();
 		T[] sourceRhs = parentRule.getRhs();
 		T targetLhs = transducer.transduceLhs(parentRule);
 		T[] targetRhs = transducer.transduceRhs(parentRule);
-		Parse<T> seedBlankParse =
+
+		PartialParse<T> seedBlankParse =
 				parseFactory.createParse(sourceInputTokens, startIndex, endIndex, sourceLhs,
 						targetLhs, sourceRhs, targetRhs, scorer.getInitialFeatureScores());
 		for (int sourceRhsIndex = 0; sourceRhsIndex < sourceRhs.length; sourceRhsIndex++) {
@@ -96,14 +100,14 @@ public class BeamSearchMerger<R extends GrammarRule<T>, T extends Token> impleme
 		int[] targetToSourceAlignment = transducer.getTargetToSourceRhsAlignment(parentRule);
 
 		// take the crossproduct of the current parse with the new parses
-		for (int targetRhsIndex = 0; targetRhsIndex < parses.length; targetRhsIndex++) {
+		for (int targetRhsIndex = 0; targetRhsIndex < childParses.length; targetRhsIndex++) {
 
 			int sourceRhsIndex = targetToSourceAlignment[targetRhsIndex];
-			List<Parse<T>> parseList = parses[targetRhsIndex];
+			List<PartialParse<T>> parseList = childParses[targetRhsIndex];
 
 			currentResultParses =
 					combine(scorer, sourceRhsIndex, targetRhsIndex, currentResultParses, parseList,
-							sourceTokens);
+							sourceInputTokens);
 		}
 
 		checkSanity(parentRule, currentResultParses);
@@ -112,11 +116,11 @@ public class BeamSearchMerger<R extends GrammarRule<T>, T extends Token> impleme
 	}
 
 	public static <R extends GrammarRule<T>, T extends Token> void checkSanity(R parentRule,
-			List<Parse<T>> currentResultParses) {
+			List<PartialParse<T>> currentResultParses) {
 
 		// check sanity of parse tree
 		if (DebugUtils.isAssertEnabled()) {
-			for (Parse<T> parse : currentResultParses) {
+			for (PartialParse<T> parse : currentResultParses) {
 
 				Tree<T>[] sourceChildren = parse.getSourceTree().getChildren();
 				for (int i = 0; i < sourceChildren.length; i++) {
@@ -132,44 +136,35 @@ public class BeamSearchMerger<R extends GrammarRule<T>, T extends Token> impleme
 		}
 	}
 
-	private List<Parse<T>> combine(Scorer<R, T> scorer, int sourceRhsIndex, int targetRhsIndex,
-			List<Parse<T>> currentParsesToBeCombined, List<Parse<T>> rightParsesToBeCombined,
-			List<T> sourceTokens) {
+	private List<PartialParse<T>> combine(Scorer<R, T> scorer, int sourceRhsIndex,
+			int targetRhsIndex, List<PartialParse<T>> currentParsesToBeCombined,
+			List<PartialParse<T>> rightParsesToBeCombined, List<T> sourceTokens) {
 
-		List<Parse<T>> combinedParses = new Beam<Parse<T>>(opts.transferBeam);
+		List<PartialParse<T>> combinedParses = new Beam<PartialParse<T>>(opts.transferBeam);
 
-		HashMap<TokenSequence<T>, Parse<T>> uniqueParses =
-				new HashMap<TokenSequence<T>, Parse<T>>(currentParsesToBeCombined.size()
-						* rightParsesToBeCombined.size());
+		Recombiner<R, T> recombiner =
+				new BasicRecombiner<R, T>(currentParsesToBeCombined.size()
+						* rightParsesToBeCombined.size(), scorer);
 
-		for (Parse<T> parseFromBackpointer : rightParsesToBeCombined) {
-			for (Parse<T> resultParse : currentParsesToBeCombined) {
+		for (PartialParse<T> parseFromBackpointer : rightParsesToBeCombined) {
+			for (PartialParse<T> resultParse : currentParsesToBeCombined) {
 
-				Parse<T> expandedParse = new Parse<T>(resultParse);
+				PartialParse<T> expandedParse = new PartialParse<T>(resultParse);
 				expandedParse.appendParse(sourceRhsIndex, targetRhsIndex, parseFromBackpointer);
 
-				TokenSequence<T> combinedSeq =
-						tokenFactory.makeTokenSequence(expandedParse.getTargetTokens());
-				Parse<T> previousParseWithSameYield = null;
+				// TODO: Add class for MarkovizedPartialParse (which can be
+				// unpacked into PartialParses)
+				// XXX: we don't have to re-calculte the LM for combined parses!
+				if (!recombiner.recombine(expandedParse)) {
 
-				if (opts.doParseYieldRecombination)
-					previousParseWithSameYield = uniqueParses.get(combinedSeq);
-
-				if (previousParseWithSameYield == null) {
+					// no recombination could be done, so we must continue with
+					// a full scoring
 
 					FeatureScores newScores =
 							scorer.combineChildParseScores(parseFromBackpointer, resultParse,
 									sourceTokens);
 					expandedParse.setCurrentScore(newScores);
 					combinedParses.add(expandedParse);
-
-					if (opts.doParseYieldRecombination)
-						uniqueParses.put(combinedSeq, expandedParse);
-				} else {
-					FeatureScores recombinedScores =
-							scorer.recombineParses(previousParseWithSameYield, expandedParse);
-					previousParseWithSameYield.setCurrentScore(recombinedScores);
-					previousParseWithSameYield.addRecombinedParse(expandedParse);
 				}
 			}
 		}
@@ -276,8 +271,8 @@ public class BeamSearchMerger<R extends GrammarRule<T>, T extends Token> impleme
 				scorer.combineHypotheses(hyp1, hyp2, combinedTokenSequence, sourceTokens);
 		featureCombinationTimer.pause();
 
-		ArrayList<Parse<T>> parses =
-				new ArrayList<Parse<T>>(hyp1.getParses().size() + hyp2.getParses().size());
+		ArrayList<PartialParse<T>> parses =
+				new ArrayList<PartialParse<T>>(hyp1.getParses().size() + hyp2.getParses().size());
 		parses.addAll(hyp1.getParses());
 		parses.addAll(hyp2.getParses());
 

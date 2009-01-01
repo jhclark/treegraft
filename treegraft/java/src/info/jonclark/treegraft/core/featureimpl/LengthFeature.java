@@ -10,7 +10,7 @@ import info.jonclark.treegraft.core.scoring.ProbUtils;
 import info.jonclark.treegraft.core.tokens.Token;
 import info.jonclark.treegraft.core.tokens.TokenSequence;
 import info.jonclark.treegraft.decoder.DecoderHypothesis;
-import info.jonclark.treegraft.parsing.parses.Parse;
+import info.jonclark.treegraft.parsing.parses.PartialParse;
 import info.jonclark.treegraft.parsing.rules.GrammarRule;
 
 import java.util.List;
@@ -67,8 +67,8 @@ public class LengthFeature<R extends GrammarRule<T>, T extends Token> implements
 		return new LengthScore(lengthPenalty);
 	}
 
-	public LengthScore combineChildParseScores(Parse<T> accumulatedParse,
-			TokenSequence<T> accumulatedSeq, LengthScore accumulatedScore, Parse<T> addedChild,
+	public LengthScore combineChildParseScores(PartialParse<T> accumulatedParse,
+			TokenSequence<T> accumulatedSeq, LengthScore accumulatedScore, PartialParse<T> addedChild,
 			TokenSequence<T> addedSeq, LengthScore addedScore, TokenSequence<T> combinedSeq,
 			List<T> inputSentence) {
 
@@ -100,7 +100,7 @@ public class LengthFeature<R extends GrammarRule<T>, T extends Token> implements
 		return lengthPenalty;
 	}
 
-	public LengthScore combineRuleScoreWithChildren(Parse<T> parse, LengthScore parseScore,
+	public LengthScore combineRuleScoreWithChildren(PartialParse<T> parse, LengthScore parseScore,
 			R ruleToAppend, List<T> inputSentence) {
 
 		// no change in length -> no change to score
@@ -127,7 +127,7 @@ public class LengthFeature<R extends GrammarRule<T>, T extends Token> implements
 		return new LengthScore(0.0);
 	}
 
-	public LengthScore scoreTerminalParse(Parse<T> terminalParse, TokenSequence<T> seq) {
+	public LengthScore scoreTerminalParse(PartialParse<T> terminalParse, TokenSequence<T> seq) {
 
 		// since it's not necessarily associated with a source token, we have no
 		// way of scoring a single target-side token individually

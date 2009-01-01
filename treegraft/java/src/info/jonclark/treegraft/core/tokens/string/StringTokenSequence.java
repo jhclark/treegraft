@@ -1,5 +1,6 @@
 package info.jonclark.treegraft.core.tokens.string;
 
+import info.jonclark.treegraft.core.tokens.TokenFactory;
 import info.jonclark.treegraft.core.tokens.TokenSequence;
 
 import java.util.ArrayList;
@@ -14,7 +15,7 @@ public class StringTokenSequence implements TokenSequence<StringToken> {
 		this.tokens = tokens;
 	}
 
-	public List<StringToken> getTokens() {
+	public List<StringToken> getContentTokens(TokenFactory<StringToken> tokenFactory) {
 		return tokens;
 	}
 
@@ -84,20 +85,25 @@ public class StringTokenSequence implements TokenSequence<StringToken> {
 	}
 
 	public TokenSequence<StringToken> prepend(TokenSequence<StringToken> prefix) {
+		
+		StringTokenSequence strSeqPrefix = (StringTokenSequence) prefix;
 
 		ArrayList<StringToken> newTokens =
-				new ArrayList<StringToken>(this.tokens.size() + prefix.getTokens().size());
-		newTokens.addAll(prefix.getTokens());
+				new ArrayList<StringToken>(this.tokens.size() + strSeqPrefix.tokens.size());
+		newTokens.addAll(strSeqPrefix.tokens);
 		newTokens.addAll(this.tokens);
 
 		return new StringTokenSequence(newTokens);
 	}
-	
+
 	public TokenSequence<StringToken> append(TokenSequence<StringToken> suffix) {
+
+		StringTokenSequence strSeqSuffix = (StringTokenSequence) suffix;
+
 		ArrayList<StringToken> newTokens =
-				new ArrayList<StringToken>(this.tokens.size() + suffix.getTokens().size());
+				new ArrayList<StringToken>(this.tokens.size() + strSeqSuffix.tokens.size());
 		newTokens.addAll(this.tokens);
-		newTokens.addAll(suffix.getTokens());
+		newTokens.addAll(strSeqSuffix.tokens);
 
 		return new StringTokenSequence(newTokens);
 	}
@@ -109,7 +115,7 @@ public class StringTokenSequence implements TokenSequence<StringToken> {
 	public StringToken get(int i) {
 		return tokens.get(i);
 	}
-	
+
 	public String toString() {
 		StringBuilder builder = new StringBuilder();
 		for (StringToken t : tokens) {

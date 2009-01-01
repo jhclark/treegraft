@@ -9,10 +9,12 @@ import info.jonclark.treegraft.core.tokens.Token;
  */
 public class IntegerToken implements Token {
 
+	protected final String word;
 	protected final int id;
 	protected final boolean terminal;
 
-	protected IntegerToken(int id, boolean terminal) {
+	protected IntegerToken(String word, int id, boolean terminal) {
+		this.word = word;
 		this.id = id;
 		this.terminal = terminal;
 	}
@@ -54,15 +56,18 @@ public class IntegerToken implements Token {
 	 * {@inheritDoc}
 	 */
 	public String toString() {
-		return getId();
+		return getWord();
 	}
 
 	public int compareTo(Token other) {
-		if(other instanceof IntegerToken) {
-			return this.id - ((IntegerToken)other).id;
+		if (other instanceof IntegerToken) {
+			return this.id - ((IntegerToken) other).id;
 		} else {
 			return -1;
 		}
 	}
 
+	public String getWord() {
+		return word;
+	}
 }

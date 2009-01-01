@@ -81,6 +81,10 @@ public class ChartParser<R extends GrammarRule<T>, T extends Token> implements P
 
 	public ChartParser(ChartParserOptions opts, TreegraftConfig<R, T> config) {
 
+		assert config.ruleFactory != null;
+		assert config.grammar != null;
+		assert config.oovHandler != null;
+		
 		this.ruleFactory = config.ruleFactory;
 		this.grammar = config.grammar;
 		this.oovHandler = config.oovHandler;
@@ -131,7 +135,7 @@ public class ChartParser<R extends GrammarRule<T>, T extends Token> implements P
 
 		// step 1
 		int i = 0;
-
+		
 		do {
 
 			// step 2 -- turn tokens into keys and/or active arcs

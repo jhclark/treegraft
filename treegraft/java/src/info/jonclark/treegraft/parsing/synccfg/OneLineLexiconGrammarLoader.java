@@ -1,7 +1,10 @@
 package info.jonclark.treegraft.parsing.synccfg;
 
+import info.jonclark.lang.NullOptions;
+import info.jonclark.lang.OptionsTarget;
 import info.jonclark.log.LogUtils;
 import info.jonclark.stat.TaskListener;
+import info.jonclark.treegraft.Treegraft.TreegraftConfig;
 import info.jonclark.treegraft.core.featureimpl.RuleScore;
 import info.jonclark.treegraft.core.scoring.ProbUtils;
 import info.jonclark.treegraft.core.tokens.Token;
@@ -20,15 +23,16 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.logging.Logger;
 
+@OptionsTarget(NullOptions.class)
 public class OneLineLexiconGrammarLoader<T extends Token> implements
 		GrammarLoader<SyncCFGRule<T>, T> {
 
 	private static final Logger log = LogUtils.getLogger();
 	private final TokenFactory<T> tokenFactory;
 
-	public OneLineLexiconGrammarLoader(TokenFactory<T> tokenFactory) {
+	public OneLineLexiconGrammarLoader(NullOptions opts, TreegraftConfig<SyncCFGRule<T>, T> config) {
 
-		this.tokenFactory = tokenFactory;
+		this.tokenFactory = config.tokenFactory;
 	}
 
 	/**

@@ -19,19 +19,6 @@ public class StringTokenFactory extends TokenFactory<StringToken> {
 	 * {@inheritDoc}
 	 */
 	@Override
-	public String getTokenAsString(StringToken tok) {
-		if (tok.terminal) {
-			return tok.str;
-		} else {
-			return tok.str.substring(NON_TERMINAL_PREFIX.length(), tok.str.length()
-					- NON_TERMINAL_SUFFIX.length());
-		}
-	}
-
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
 	public StringToken makeToken(String str, boolean terminal) {
 		String key;
 		if (terminal) {

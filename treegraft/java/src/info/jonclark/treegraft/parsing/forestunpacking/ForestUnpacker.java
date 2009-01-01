@@ -9,7 +9,7 @@ import info.jonclark.treegraft.core.tokens.Token;
 import info.jonclark.treegraft.parsing.chartparser.ActiveArc;
 import info.jonclark.treegraft.parsing.chartparser.Key;
 import info.jonclark.treegraft.parsing.merging.Merger;
-import info.jonclark.treegraft.parsing.parses.Parse;
+import info.jonclark.treegraft.parsing.parses.PartialParse;
 import info.jonclark.treegraft.parsing.parses.ParseFactory;
 import info.jonclark.treegraft.parsing.rules.GrammarRule;
 import info.jonclark.treegraft.parsing.transduction.Transducer;
@@ -17,14 +17,15 @@ import info.jonclark.treegraft.parsing.transduction.Transducer;
 import java.util.ArrayList;
 import java.util.List;
 
+// keep k-best translations for each non-terminal type and each span
+// by walking up the hypergraph, bottom-up
 @OptionsTarget(ForestUnpacker.ForestUnpackerOptions.class)
-public class ForestUnpacker<R extends GrammarRule<T>, T extends Token> {
+public class ForestUnpacker<R extends GrammarRule<T>, T extends Token> implements
+		ForestProcessor<R, T> {
 
 	private final Scorer<R, T> scorer;
 	private final Merger<R, T> pruner;
 	private final Transducer<R, T> transducer;
-	private final ParseFactory<R, T> parseFactory;
-	private final List<T> sourceInputTokens;
 
 	public static class ForestUnpackerOptions implements Options {
 
@@ -32,14 +33,11 @@ public class ForestUnpacker<R extends GrammarRule<T>, T extends Token> {
 
 	// TODO: Pass parses from the left to the parses being created on the right
 	// e.g. we can use these for language model context
-	public ForestUnpacker(ForestUnpackerOptions opts, TreegraftConfig<R, T> config,
-			ParseFactory<R, T> parseFactory, List<T> sourceInputTokens) {
+	public ForestUnpacker(ForestUnpackerOptions opts, TreegraftConfig<R, T> config) {
 
 		this.scorer = config.scorer;
 		this.pruner = config.merger;
 		this.transducer = config.ruleFactory.getTransducer();
-		this.parseFactory = parseFactory;
-		this.sourceInputTokens = sourceInputTokens;
 	}
 
 	/**
@@ -52,19 +50,22 @@ public class ForestUnpacker<R extends GrammarRule<T>, T extends Token> {
 	 *            target strings).
 	 * @return an array of formatted parses
 	 */
-	public List<Parse<T>> getPartialParses(Key<R, T> key) {
+	public List<PartialParse<T>> getPartialParses(Key<R, T> key, List<T> sourceInputTokens,
+			ParseFactory<R, T> parseFactory) {
 
-		ArrayList<Parse<T>> result = new ArrayList<Parse<T>>();
+		ArrayList<PartialParse<T>> result = new ArrayList<PartialParse<T>>();
 		for (ActiveArc<R, T> arc : key.getActiveArcs()) {
 			for (R rule : arc.getRules()) {
-				result.addAll(unpackNonterminalBackpointers(key, arc, rule));
+				result.addAll(unpackNonterminalBackpointers(key, arc, rule, sourceInputTokens,
+						parseFactory));
 			}
 		}
 		return result;
 	}
 
-	private List<Parse<T>> unpackNonterminalBackpointers(Key<R, T> key,
-			ActiveArc<R, T> arcToUnpack, R ruleToUnpack) {
+	private List<PartialParse<T>> unpackNonterminalBackpointers(Key<R, T> key,
+			ActiveArc<R, T> arcToUnpack, R ruleToUnpack, List<T> sourceInputTokens,
+			ParseFactory<R, T> parseFactory) {
 
 		// TODO: Figure out how to safely cache
 		// if(key.getTransducedParseCache() != null) {
@@ -74,7 +75,7 @@ public class ForestUnpacker<R extends GrammarRule<T>, T extends Token> {
 		// iterate over all of the RHS constituents for this key
 		int[] targetToSourceAlignment = transducer.getTargetToSourceRhsAlignment(ruleToUnpack);
 		T[] transducedRhs = transducer.transduceRhs(ruleToUnpack);
-		ArrayList<Parse<T>>[] parsesFromBackpointer = new ArrayList[transducedRhs.length];
+		List<PartialParse<T>>[] parsesFromBackpointer = new List[transducedRhs.length];
 
 		// traverse left to right across transduced RHS
 		// when we find a non-terminal, we will use the alignment
@@ -89,7 +90,8 @@ public class ForestUnpacker<R extends GrammarRule<T>, T extends Token> {
 
 				parsesFromBackpointer[targetRhsIndex] =
 						outputTargetTerminal(key.getStartIndex(), key.getEndIndex(), ruleToUnpack,
-								transducedRhs[targetRhsIndex], sourceRhsIndex, targetRhsIndex);
+								transducedRhs[targetRhsIndex], sourceRhsIndex, targetRhsIndex,
+								sourceInputTokens, parseFactory);
 			} else {
 
 				List<Key<R, T>> backpointers = arcToUnpack.getBackpointers(sourceRhsIndex);
@@ -97,17 +99,23 @@ public class ForestUnpacker<R extends GrammarRule<T>, T extends Token> {
 						+ " for key " + key.toString();
 
 				parsesFromBackpointer[targetRhsIndex] =
-						outputNonterminal(key, ruleToUnpack, sourceRhsIndex, backpointers);
+						outputNonterminal(key, ruleToUnpack, sourceRhsIndex, backpointers,
+								sourceInputTokens, parseFactory);
 			}
 
 		}
+		
+//		(R parentRule,
+//				List<T> sourceInputTokens, int sourceInputStartIndex, int sourceInputEndIndex,
+//				Scorer<R, T> scorer, Transducer<R, T> transducer, ParseFactory<R, T> parseFactory,
+//				List<PartialParse<T>>... childParses);
 
-		List<Parse<T>> result =
-				pruner.combineCrossProductOfParses(ruleToUnpack, sourceInputTokens,
-						key.getStartIndex(), key.getEndIndex(), parsesFromBackpointer, scorer,
-						transducer, sourceInputTokens, parseFactory);
+		List<PartialParse<T>> result =
+				pruner.combineCrossProductOfChildParses(ruleToUnpack, sourceInputTokens,
+						key.getStartIndex(), key.getEndIndex(), scorer, transducer, parseFactory,
+						parsesFromBackpointer);
 
-		for (Parse<T> parse : result) {
+		for (PartialParse<T> parse : result) {
 
 			// update parse scores
 			FeatureScores combinedScore =
@@ -120,12 +128,13 @@ public class ForestUnpacker<R extends GrammarRule<T>, T extends Token> {
 		return result;
 	}
 
-	private ArrayList<Parse<T>> outputTargetTerminal(int sourceTokenStart, int sourceTokenEnd,
-			R parentRule, T terminal, int sourceRhsIndex, int targetRhsIndex) {
+	private ArrayList<PartialParse<T>> outputTargetTerminal(int sourceTokenStart,
+			int sourceTokenEnd, R parentRule, T terminal, int sourceRhsIndex, int targetRhsIndex,
+			List<T> sourceInputTokens, ParseFactory<R, T> parseFactory) {
 
 		// TODO: MAKE SURE ONLY THE **FIRST/LAST** TERMINAL GETS MARKERS ADDED
 
-		Parse<T> terminalParse =
+		PartialParse<T> terminalParse =
 				parseFactory.createParse(sourceTokenStart, sourceTokenEnd, sourceInputTokens,
 						terminal, parentRule, targetRhsIndex);
 		FeatureScores terminalScore = scorer.scoreTerminalParse(terminalParse);
@@ -134,15 +143,16 @@ public class ForestUnpacker<R extends GrammarRule<T>, T extends Token> {
 		// System.out.println("TRANSDUCED TERMINAL: " +
 		// terminalParse.toString());
 
-		ArrayList<Parse<T>> list = new ArrayList<Parse<T>>(1);
+		ArrayList<PartialParse<T>> list = new ArrayList<PartialParse<T>>(1);
 		list.add(terminalParse);
 		return list;
 	}
 
-	private ArrayList<Parse<T>> outputNonterminal(Key<R, T> key, R parentRule, int sourceRhsIndex,
-			List<Key<R, T>> nonterminalBackpointers) {
+	private ArrayList<PartialParse<T>> outputNonterminal(Key<R, T> key, R parentRule,
+			int sourceRhsIndex, List<Key<R, T>> nonterminalBackpointers, List<T> sourceInputTokens,
+			ParseFactory<R, T> parseFactory) {
 
-		ArrayList<Parse<T>> parsesFromNonterminal = new ArrayList<Parse<T>>();
+		ArrayList<PartialParse<T>> parsesFromNonterminal = new ArrayList<PartialParse<T>>();
 
 		// since each backpointer is guaranteed to satisfy for the constraints
 		// only of AT LEAST one rule, we must check to make sure that this
@@ -154,9 +164,9 @@ public class ForestUnpacker<R extends GrammarRule<T>, T extends Token> {
 
 					if (parentRule.areConstraintsSatisfied(sourceRhsIndex, backpointerRule)) {
 
-						List<Parse<T>> parsesFromBackpointer =
+						List<PartialParse<T>> parsesFromBackpointer =
 								unpackNonterminalBackpointers(backpointer, backpointerArc,
-										backpointerRule);
+										backpointerRule, sourceInputTokens, parseFactory);
 						parsesFromNonterminal.addAll(parsesFromBackpointer);
 
 						// for (Parse<T> p : parsesFromBackpointer) {

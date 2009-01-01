@@ -36,29 +36,12 @@ public class ParseFactory<R extends GrammarRule<T>, T extends Token> {
 	 *            The FULL source input sequence
 	 * @param lispTree
 	 */
-	public Parse<T> createParse(List<T> sourceInputTokens, int startIndex, int endIndex,
+	public PartialParse<T> createParse(List<T> sourceInputTokens, int startIndex, int endIndex,
 			T sourceLhs, T targetLhs, T[] sourceRhs, T[] targetRhs, FeatureScores scores) {
 
-		return new Parse<T>(sourceInputTokens, startIndex, endIndex, sourceLhs, targetLhs,
+		return new PartialParse<T>(sourceInputTokens, startIndex, endIndex, sourceLhs, targetLhs,
 				sourceRhs, targetRhs, scores);
 	}
-
-	// /**
-	// * Create a new <code>Parse</code> from a source terminal.
-	// *
-	// * @param sourceInputTokens
-	// * @param startIndex
-	// * @param endIndex
-	// * @param sourceTerminal
-	// * @param scores
-	// */
-	// public Parse<T> createParse(List<T> sourceInputTokens, int startIndex,
-	// int endIndex,
-	// T sourceTerminal, FeatureScores scores) {
-	//
-	// return new Parse<T>(sourceInputTokens, startIndex, endIndex,
-	// sourceTerminal, scores);
-	// }
 
 	/**
 	 * Create a new <code>Parse</code> from a target terminal.
@@ -67,19 +50,19 @@ public class ParseFactory<R extends GrammarRule<T>, T extends Token> {
 	 * @param targetTerminal
 	 * @param scores
 	 */
-	public Parse<T> createParse(int sourceTokenStart,
+	public PartialParse<T> createParse(int sourceTokenStart,
 			int sourceTokenEnd, List<T> sourceInputTokens, T targetTerminal, R parentRule,
 			int targetRhsIndex) {
 
-		List<T> targetTokens = new ArrayList<T>(2);
-
-		boolean firstTerminal = targetRhsIndex == 0;
-		boolean lastTerminal = transducer.transduceRhs(parentRule).length - 1 == targetRhsIndex;
-
-		// add beginning of sentence marker
-		if (sourceTokenStart == 0 && firstTerminal) {
-			targetTokens.add(bos);
-		}
+		List<T> targetTokens = new ArrayList<T>(1);
+//
+//		boolean firstTerminal = targetRhsIndex == 0;
+//		boolean lastTerminal = transducer.transduceRhs(parentRule).length - 1 == targetRhsIndex;
+//
+//		// add beginning of sentence marker
+//		if (sourceTokenStart == 0 && firstTerminal) {
+//			targetTokens.add(bos);
+//		}
 
 		// HACK HACK HACK HACK HACK HACK HACK HACK
 		// String strTok = targetTerminal.toString();
@@ -90,14 +73,14 @@ public class ParseFactory<R extends GrammarRule<T>, T extends Token> {
 
 		targetTokens.add(targetTerminal);
 
-		// add end of sentence marker
-		if (sourceTokenEnd == inputLength && lastTerminal) {
-			targetTokens.add(eos);
-		}
+//		// add end of sentence marker
+//		if (sourceTokenEnd == inputLength && lastTerminal) {
+//			targetTokens.add(eos);
+//		}
 
 //		System.out.println("CREATED PARSE: " + sourceTokenStart + " " + sourceTokenEnd + ": "
 //				+ Arrays.toString(tokenFactory.getTokensAsStrings(targetTokens)));
 
-		return new Parse<T>(sourceInputTokens, targetTokens, targetTerminal);
+		return new PartialParse<T>(sourceInputTokens, targetTokens, targetTerminal);
 	}
 }

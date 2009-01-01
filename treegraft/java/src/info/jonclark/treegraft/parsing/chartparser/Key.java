@@ -2,7 +2,7 @@ package info.jonclark.treegraft.parsing.chartparser;
 
 import info.jonclark.log.LogUtils;
 import info.jonclark.treegraft.core.tokens.Token;
-import info.jonclark.treegraft.parsing.parses.Parse;
+import info.jonclark.treegraft.parsing.parses.PartialParse;
 import info.jonclark.treegraft.parsing.rules.GrammarRule;
 
 import java.util.ArrayList;
@@ -31,7 +31,7 @@ public class Key<R extends GrammarRule<T>, T extends Token> {
 	private final ActiveArc<R, T> firstArc;
 	private final T word;
 	private final int hashCode;
-	private List<Parse<T>> cache;
+	private List<PartialParse<T>> cache;
 
 	// private double maxLogProb;
 
@@ -226,11 +226,11 @@ public class Key<R extends GrammarRule<T>, T extends Token> {
 		return false;
 	}
 
-	public List<Parse<T>> getTransducedParseCache() {
+	public List<PartialParse<T>> getTransducedParseCache() {
 		return cache;
 	}
 
-	public void setTransducedParseCache(List<Parse<T>> cache) {
+	public void setTransducedParseCache(List<PartialParse<T>> cache) {
 		this.cache = cache;
 	}
 

@@ -10,23 +10,23 @@ import info.jonclark.treegraft.Treegraft.TreegraftConfig;
 import info.jonclark.treegraft.core.lm.ARPALanguageModelLoader;
 import info.jonclark.treegraft.core.lm.EfficientNGramLanguageModel;
 import info.jonclark.treegraft.core.lm.LanguageModel;
+import info.jonclark.treegraft.core.lm.LanguageModelLoader;
 import info.jonclark.treegraft.core.lm.LanguageModelMultiScore;
 import info.jonclark.treegraft.core.lm.LanguageModelScore;
-import info.jonclark.treegraft.core.lm.SimpleNGramLanguageModel;
 import info.jonclark.treegraft.core.lm.EfficientNGramLanguageModel.EfficientNGramLanguageModelOptions;
 import info.jonclark.treegraft.core.scoring.Feature;
 import info.jonclark.treegraft.core.scoring.ProbUtils;
 import info.jonclark.treegraft.core.tokens.Token;
 import info.jonclark.treegraft.core.tokens.TokenSequence;
+import info.jonclark.treegraft.core.tokens.integer.IntegerToken;
 import info.jonclark.treegraft.decoder.DecoderHypothesis;
-import info.jonclark.treegraft.parsing.parses.Parse;
+import info.jonclark.treegraft.parsing.parses.PartialParse;
 import info.jonclark.treegraft.parsing.rules.GrammarRule;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.annotation.Documented;
 import java.util.Collections;
 import java.util.List;
 import java.util.logging.Logger;
@@ -42,12 +42,11 @@ public class LanguageModelFeature<R extends GrammarRule<T>, T extends Token> imp
 		@Option(name = "features.lm.weight", required = true, usage = "Log-linear lambda weight for the language model feature")
 		public double lmWeight;
 
-		@Option(name = "lm.modelFile", usage = "The language model file(s) (space delimited) to be used by the language model feature(s)", errorIfFileNotExists = true, delim = " ")
+		@Option(name = "lm.modelFile", usage = "The language model file(s) (space delimited) to be used by the language model feature(s)", errorIfFileNotExists = true, arrayDelim = " ")
 		public File[] lmFiles;
 
 		@Option(name = "lm.encoding", usage = "The encoding for all language model files", required = false, defaultValue = "UTF-8")
 		public String lmEncoding;
-
 	}
 
 	private final LanguageModel<T>[] lmArr;
@@ -58,6 +57,7 @@ public class LanguageModelFeature<R extends GrammarRule<T>, T extends Token> imp
 
 	private static final Logger log = LogUtils.getLogger();
 
+	// TODO: How do we get the LM loader in here w/o layered reflection?
 	public LanguageModelFeature(LanguageModelOptions opts, TreegraftConfig<R, T> config)
 			throws IOException {
 
@@ -73,7 +73,7 @@ public class LanguageModelFeature<R extends GrammarRule<T>, T extends Token> imp
 			// per-LM basis
 			// TODO: Allow the user to specify which kind of LM implementation
 			// to use
-			ARPALanguageModelLoader<T> lmLoader = new ARPALanguageModelLoader<T>();
+			LanguageModelLoader<T> lmLoader = new ARPALanguageModelLoader<T>();
 
 			// lmArr[i] = new
 			// SimpleNGramLanguageModel<T>(config.profiler.featureTimer);
@@ -81,7 +81,7 @@ public class LanguageModelFeature<R extends GrammarRule<T>, T extends Token> imp
 					config.configurator.getOptions(EfficientNGramLanguageModelOptions.class);
 			lmArr[i] =
 					(LanguageModel<T>) new EfficientNGramLanguageModel(childOpts,
-							config.profiler.featureTimer);
+							(TreegraftConfig<?, IntegerToken>) config);
 			InputStream stream = new FileInputStream(lmFile);
 			if (lmFile.getName().endsWith(".gz")) {
 				stream = new GZIPInputStream(stream);
@@ -126,10 +126,11 @@ public class LanguageModelFeature<R extends GrammarRule<T>, T extends Token> imp
 		return new LanguageModelMultiScore(vec);
 	}
 
-	public LanguageModelMultiScore combineChildParseScores(Parse<T> accumulatedParse,
+	public LanguageModelMultiScore combineChildParseScores(PartialParse<T> accumulatedParse,
 			TokenSequence<T> accumulatedSeq, LanguageModelMultiScore accumulatedScore,
-			Parse<T> addedChild, TokenSequence<T> addedSeq, LanguageModelMultiScore addedScore,
-			TokenSequence<T> combinedSequence, List<T> inputSentence) {
+			PartialParse<T> addedChild, TokenSequence<T> addedSeq,
+			LanguageModelMultiScore addedScore, TokenSequence<T> combinedSequence,
+			List<T> inputSentence) {
 
 		LanguageModelScore[] vec = new LanguageModelScore[lmArr.length];
 
@@ -145,7 +146,8 @@ public class LanguageModelFeature<R extends GrammarRule<T>, T extends Token> imp
 		return new LanguageModelMultiScore(vec);
 	}
 
-	public LanguageModelMultiScore scoreTerminalParse(Parse<T> terminalParse, TokenSequence<T> seq) {
+	public LanguageModelMultiScore scoreTerminalParse(PartialParse<T> terminalParse,
+			TokenSequence<T> seq) {
 
 		LanguageModelScore[] vec = new LanguageModelScore[lmArr.length];
 
@@ -166,7 +168,7 @@ public class LanguageModelFeature<R extends GrammarRule<T>, T extends Token> imp
 		return new LanguageModelMultiScore(vec);
 	}
 
-	public LanguageModelMultiScore combineRuleScoreWithChildren(Parse<T> parse,
+	public LanguageModelMultiScore combineRuleScoreWithChildren(PartialParse<T> parse,
 			LanguageModelMultiScore parseScore, R ruleToAppend, List<T> inputSentence) {
 
 		// This won't affect terminals, therefore the LM doesn't care

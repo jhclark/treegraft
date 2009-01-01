@@ -1,9 +1,11 @@
 package info.jonclark.treegraft.parsing.oov;
 
-import info.jonclark.properties.SmartProperties;
+import info.jonclark.lang.OptionsTarget;
+import info.jonclark.treegraft.Treegraft.TreegraftConfig;
 import info.jonclark.treegraft.core.featureimpl.RuleScore;
 import info.jonclark.treegraft.core.tokens.Token;
 import info.jonclark.treegraft.core.tokens.TokenFactory;
+import info.jonclark.treegraft.parsing.oov.CopyOOVHandler.CopyOrDeleteOOVHandlerOptions;
 import info.jonclark.treegraft.parsing.rules.RuleException;
 import info.jonclark.treegraft.parsing.synccfg.SyncCFGRule;
 
@@ -11,6 +13,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 
+@OptionsTarget(CopyOOVHandler.CopyOrDeleteOOVHandlerOptions.class)
 public class DeleteOOVHandler<T extends Token> implements OutOfVocabularyHandler<SyncCFGRule<T>, T> {
 
 	private final TokenFactory<T> tokenFactory;
@@ -20,18 +23,14 @@ public class DeleteOOVHandler<T extends Token> implements OutOfVocabularyHandler
 	private int oovCounter = 0;
 	private final T[] blankRhs;
 
-	public DeleteOOVHandler(SmartProperties props, TokenFactory<T> tokenFactory) {
+	public DeleteOOVHandler(CopyOrDeleteOOVHandlerOptions opts, TreegraftConfig<?, T> config) {
 
-		this.tokenFactory = tokenFactory;
+		this.tokenFactory = config.tokenFactory;
 		this.alignment = new int[] { -1 };
 		this.blankRhs = tokenFactory.newTokenArray(0);
+		this.oovRuleScore = new RuleScore(opts.sgt, opts.tgs);
 
-		double sgt = props.getPropertyFloat("grammar.oovHandler.oovRuleSgtLogProb");
-		double tgs = props.getPropertyFloat("grammar.oovHandler.oovRuleTgsLogProb");
-		this.oovRuleScore = new RuleScore(sgt, tgs);
-		this.oovRuleLhsList =
-				tokenFactory.makeTokens(
-						props.getPropertyStringArray("grammar.oovHandler.oovRuleLhsList"), true);
+		this.oovRuleLhsList = tokenFactory.makeTokens(opts.oovRuleLhsList, true);
 	}
 
 	public List<SyncCFGRule<T>> generateOOVRules(T sourceOovTerminal,

@@ -2,19 +2,16 @@ package info.jonclark.treegraft.distributed.multithreading;
 
 import info.jonclark.lang.OptionParser;
 import info.jonclark.lang.Pair;
-import info.jonclark.properties.SmartProperties;
 import info.jonclark.stat.TextProgressBar;
 import info.jonclark.treegraft.Treegraft;
 import info.jonclark.treegraft.core.plugin.ReflectionException;
 import info.jonclark.treegraft.core.tokens.Token;
-import info.jonclark.treegraft.core.tokens.TokenFactory;
-import info.jonclark.treegraft.parsing.grammar.GrammarLoader;
 import info.jonclark.treegraft.parsing.rules.RuleException;
-import info.jonclark.treegraft.parsing.rules.RuleFactory;
 import info.jonclark.treegraft.parsing.synccfg.SyncCFGRule;
 import info.jonclark.util.StringUtils;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.text.ParseException;
 import java.util.concurrent.ArrayBlockingQueue;
 
@@ -24,14 +21,13 @@ public class MultithreadedTreegraft<R extends SyncCFGRule<T>, T extends Token> e
 	private ArrayBlockingQueue<Pair<Integer, String>> sentences;
 	private final int nThreads;
 
-	public MultithreadedTreegraft(TreegraftCoreOptions config, SmartProperties props,
-			OptionParser configurator, TokenFactory<T> tokenFactory,
-			RuleFactory<R, T> ruleFactory, GrammarLoader<R, T> grammarLoader,
-			GrammarLoader<R, T> lexiconLoader, int nThreads) throws IOException, ParseException,
-			ReflectionException, RuleException {
+	public MultithreadedTreegraft(TreegraftCoreOptions<R, T> config, OptionParser configurator,
+			int nThreads) throws IOException, ParseException, ReflectionException, RuleException,
+			InvocationTargetException, IllegalArgumentException, SecurityException,
+			InstantiationException, IllegalAccessException, NoSuchMethodException {
 
 		// use one of everything... except parsers and decoders
-		super(config, props, configurator, tokenFactory, ruleFactory, grammarLoader, lexiconLoader);
+		super(config, configurator);
 
 		this.sentences =
 				new ArrayBlockingQueue<Pair<Integer, String>>(super.sentences.length, true);
@@ -51,7 +47,8 @@ public class MultithreadedTreegraft<R extends SyncCFGRule<T>, T extends Token> e
 		}
 
 		final TextProgressBar progressBar =
-				new TextProgressBar(System.err, "sent", 100, super.opts.barWidth, super.opts.animatedBar);
+				new TextProgressBar(System.err, "sent", 100, super.config.opts.barWidth,
+						super.config.opts.animatedBar);
 		progressBar.beginTask(sentences.size());
 
 		final Thread[] threads = new Thread[nThreads];

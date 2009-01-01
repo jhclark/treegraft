@@ -1,8 +1,8 @@
 package info.jonclark.treegraft.core;
 
 import info.jonclark.treegraft.core.tokens.Token;
-import info.jonclark.treegraft.decoder.DecoderHypothesis;
 import info.jonclark.treegraft.decoder.Lattice;
+import info.jonclark.treegraft.parsing.parses.PartialParse;
 import info.jonclark.treegraft.parsing.rules.GrammarRule;
 import info.jonclark.util.StringUtils;
 
@@ -13,7 +13,7 @@ public class Result<R extends GrammarRule<T>, T extends Token> {
 	public final Throwable t;
 	public final int nSentence;
 	public final String inputSentence;
-	public final List<DecoderHypothesis<T>> nBestList;
+	public final List<PartialParse<T>> nBestList;
 	public final Lattice<R, T> lattice;
 
 	public Result(int nSentence, Throwable t) {
@@ -31,7 +31,7 @@ public class Result<R extends GrammarRule<T>, T extends Token> {
 	 * @param inputSentence
 	 * @param nBestList
 	 */
-	public Result(int nSentence, String inputSentence, List<DecoderHypothesis<T>> nBestList,
+	public Result(int nSentence, String inputSentence, List<PartialParse<T>> nBestList,
 			Lattice<R, T> lattice) {
 		this.nBestList = nBestList;
 		this.inputSentence = inputSentence;

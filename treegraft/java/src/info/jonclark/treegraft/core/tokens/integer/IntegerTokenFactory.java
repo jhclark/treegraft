@@ -8,6 +8,9 @@ import java.util.List;
 
 /**
  * A <code>TokenFactory</code> implementation for <code>IntegerTokens</code>.
+ * Uses multiple (100) counters, each of which starts counting from a different
+ * range to give a more even distribution over sequence numbers; this makes
+ * hashing more effective.
  * 
  * @author Jonathan Clark
  */
@@ -16,7 +19,8 @@ public class IntegerTokenFactory extends TokenFactory<IntegerToken> {
 	private static final int DEFAULT_VOCAB_SIZE = 10000;
 	private final HashMap<String, IntegerToken> str2tok =
 			new HashMap<String, IntegerToken>(DEFAULT_VOCAB_SIZE);
-	private final HashMap<IntegerToken, String> int2str = new HashMap<IntegerToken, String>(DEFAULT_VOCAB_SIZE);
+	private final HashMap<Integer, String> int2str =
+			new HashMap<Integer, String>(DEFAULT_VOCAB_SIZE);
 
 	private final int maxVocabSize;
 
@@ -43,12 +47,13 @@ public class IntegerTokenFactory extends TokenFactory<IntegerToken> {
 		}
 	}
 
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public String getTokenAsString(IntegerToken tok) {
-		return int2str.get(tok);
+	protected String getStringFromId(int id) {
+		String str = int2str.get(id);
+		if (str == null) {
+			throw new RuntimeException("Unknown token ID: " + id);
+		} else {
+			return str;
+		}
 	}
 
 	/**
@@ -71,9 +76,10 @@ public class IntegerTokenFactory extends TokenFactory<IntegerToken> {
 			}
 
 			int id = nextId();
-			tok = new IntegerToken(id, terminal);
+			tok = new IntegerToken(str, id, terminal);
 			str2tok.put(key, tok);
-			int2str.put(tok, str);
+			int2str.put(id, str);
+//			System.out.println("Assigned " + key + " to " + id);
 		}
 		return tok;
 	}

@@ -25,6 +25,15 @@ public interface RuleFactory<R extends GrammarRule<T>, T extends Token> {
 	 * @return the new dummy rule
 	 */
 	public R makeDummyRule(T token);
-	
+
+	public R makeGlueRule(T label, T[] sourceRhs, T[] targetRhs);
+
+	/**
+	 * Allows the specification of an alignment as an int array having the same
+	 * length as the source RHS, where each index corresponds to a source
+	 * constituent and each value corresponds to a target constituent.
+	 */
+	public R makeGlueRule(T label, T[] sourceRhs, T[] targetRhs, int[] sourceToTargetAlignment);
+
 	public Transducer<R, T> getTransducer();
 }

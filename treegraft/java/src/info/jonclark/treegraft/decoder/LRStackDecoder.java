@@ -9,14 +9,13 @@ import info.jonclark.treegraft.Treegraft.TreegraftConfig;
 import info.jonclark.treegraft.core.scoring.Scorer;
 import info.jonclark.treegraft.core.search.Beam;
 import info.jonclark.treegraft.core.tokens.Token;
-import info.jonclark.treegraft.parsing.chartparser.Chart;
-import info.jonclark.treegraft.parsing.chartparser.Key;
-import info.jonclark.treegraft.parsing.forestunpacking.ForestUnpacker;
 import info.jonclark.treegraft.parsing.merging.Merger;
+import info.jonclark.treegraft.parsing.parses.ParseFactory;
 import info.jonclark.treegraft.parsing.parses.PartialParse;
 import info.jonclark.treegraft.parsing.rules.GrammarRule;
+import info.jonclark.treegraft.parsing.rules.RuleFactory;
+import info.jonclark.treegraft.parsing.transduction.Transducer;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -32,6 +31,7 @@ public class LRStackDecoder<R extends GrammarRule<T>, T extends Token> implement
 
 	private final Scorer<R, T> scorer;
 	private final Merger<R, T> merger;
+	private final T glueLabel;
 	private final ProfilerTimer decoderTimer;
 	private final ProfilerTimer combineTimer;
 
@@ -43,35 +43,63 @@ public class LRStackDecoder<R extends GrammarRule<T>, T extends Token> implement
 		public int nBest;
 	}
 	private final LRStackDecoderOptions opts;
+	private final RuleFactory<R, T> ruleFactory;
+
+	private final R decoderGlueRule;
+
+	private final TreegraftConfig<R, T> config;
 
 	public LRStackDecoder(LRStackDecoderOptions opts, TreegraftConfig<R, T> config) {
 
+		this.config = config;
 		this.opts = opts;
+		this.ruleFactory = config.ruleFactory;
 
 		this.scorer = config.scorer;
 		this.merger = config.merger;
+		this.glueLabel = config.tokenFactory.makeToken("DECODER", false);
+
+		T[] glueRhs = config.tokenFactory.makeTokens(new String[] { "*", "*" }, false);
+		this.decoderGlueRule = config.ruleFactory.makeGlueRule(glueLabel, glueRhs, glueRhs);
+
 		this.decoderTimer = config.profiler.decoderTimer;
 		this.combineTimer = ProfilerTimer.newTimer("combine-hypotheses", decoderTimer, true, false);
 	}
 
-	public List<DecoderHypothesis<T>> getKBest(Lattice<R, T> lattice) {
+	public List<PartialParse<T>> getKBest(Lattice<R, T> targetLattice,
+			ParseFactory<R, T> parseFactory) {
 
 		decoderTimer.go();
 
-		int N = lattice.getInputLength();
+		int N = targetLattice.getInputLength();
 
 		// create one beam (stack) for each number of source words covered
-		Beam<DecoderHypothesis<T>>[] decoderBeams = createEmptyDecoderBeams(opts.nBest, N);
+		// NOTE: The List actually uses a Beam implementation
+		List<PartialParse<T>>[] decoderBeams = createEmptyDecoderBeams(opts.nBest, N);
+
+		// append sentence markers for the LM
+		for (int i = 1; i <= N; i++) {
+			for (PartialParse<T> parse : targetLattice.getPartialParses(0, i)) {
+				parse.prependTargetTerminal(config.bos);
+			}
+		}
+		for (int i = 0; i < N; i++) {
+			for (PartialParse<T> parse : targetLattice.getPartialParses(i, N)) {
+				parse.appendTargetTerminal(config.eos);
+			}
+		}
 
 		// i corresponds to # of src words covered - 1
 		for (int i = 0; i < N; i++) {
 
-			Beam<DecoderHypothesis<T>> outputBeam = decoderBeams[i];
+			// List<PartialParse<T>> outputBeam = decoderBeams[i];
 
 			// copy hypotheses from the transfer beam that covers this whole
-			// span
-			// transferBeams[0][i + 1]
-			outputBeam.addAll(lattice.getArcs(0, i + 1));
+			// span transferBeams[0][i + 1]
+			decoderBeams[i].addAll(targetLattice.getPartialParses(0, i + 1));
+
+			// TODO: Add BOS here
+			// ----------------------------------------------------------
 
 			// now merge transfer hypotheses ending at position i, but not
 			// covering the whole input span, with decoder hypotheses starting
@@ -79,19 +107,35 @@ public class LRStackDecoder<R extends GrammarRule<T>, T extends Token> implement
 			// here, you can think of j as a "midpoint" splitting the
 			// combination
 			for (int j = 0; j < i; j++) {
-				Beam<DecoderHypothesis<T>> decoderInputBeamLeft = decoderBeams[j];
+				List<PartialParse<T>> decoderInputBeamLeft = decoderBeams[j];
 
 				// transferBeams[j + 1][i + 1]
-				List<PartialParse<T>> transferInputBeamRight = lattice.getArcs(j + 1, i + 1);
+				List<PartialParse<T>> transferInputBeamRight = targetLattice.getPartialParses(j + 1, i + 1);
 				if (log.isLoggable(Level.FINE)) {
-					log.fine("Combining the " + decoderInputBeamLeft.currentSize()
+					log.fine("Combining the " + decoderInputBeamLeft.size()
 							+ " decoder hypotheses from 0 to " + j + " with the "
 							+ transferInputBeamRight.size() + " transfer hypotheses of from "
 							+ (j + 1) + " to " + (i + 1));
 				}
 				combineTimer.go();
-				merger.combineCrossProductOfHypotheses(scorer, decoderInputBeamLeft,
-						transferInputBeamRight, outputBeam, lattice.getSourceInputTokens());
+
+				// public List<PartialParse<T>>
+				// combineCrossProductOfChildParses(R parentRule,
+				// List<T> sourceInputTokens, int sourceInputStartIndex, int
+				// sourceInputEndIndex,
+				// Scorer<R, T> scorer, Transducer<R, T> transducer,
+				// ParseFactory<R, T> parseFactory,
+				// List<PartialParse<T>>... childParses);
+
+				// TODO: Add EOS here
+				// ----------------------------------------------------------
+				// if we're covering the whole input span
+
+				decoderBeams[i] =
+						merger.combineCrossProductOfChildParses(decoderGlueRule,
+								targetLattice.getSourceInputTokens(), j + 1, i + 1, scorer,
+								ruleFactory.getTransducer(), parseFactory, decoderInputBeamLeft,
+								transferInputBeamRight);
 				combineTimer.pause();
 			}
 
@@ -121,7 +165,7 @@ public class LRStackDecoder<R extends GrammarRule<T>, T extends Token> implement
 			// }
 
 			if (log.isLoggable(Level.FINE)) {
-				log.fine("Created " + outputBeam.currentSize() + " hypotheses of length " + (i + 1));
+				log.fine("Created " + decoderBeams[i].size() + " hypotheses of length " + (i + 1));
 			}
 		}
 
@@ -140,10 +184,10 @@ public class LRStackDecoder<R extends GrammarRule<T>, T extends Token> implement
 		return decoderBeams[N - 1];
 	}
 
-	private Beam<DecoderHypothesis<T>>[] createEmptyDecoderBeams(int k, final int N) {
-		Beam<DecoderHypothesis<T>>[] beams = new Beam[N];
+	private Beam<PartialParse<T>>[] createEmptyDecoderBeams(int k, final int N) {
+		Beam<PartialParse<T>>[] beams = new Beam[N];
 		for (int i = 0; i < beams.length; i++) {
-			beams[i] = new Beam<DecoderHypothesis<T>>(k);
+			beams[i] = new Beam<PartialParse<T>>(k);
 		}
 		return beams;
 	}

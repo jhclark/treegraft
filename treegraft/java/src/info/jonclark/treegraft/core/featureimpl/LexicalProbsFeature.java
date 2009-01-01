@@ -13,7 +13,7 @@ import info.jonclark.treegraft.core.scoring.ProbUtils;
 import info.jonclark.treegraft.core.tokens.Token;
 import info.jonclark.treegraft.core.tokens.TokenSequence;
 import info.jonclark.treegraft.decoder.DecoderHypothesis;
-import info.jonclark.treegraft.parsing.parses.Parse;
+import info.jonclark.treegraft.parsing.parses.PartialParse;
 import info.jonclark.treegraft.parsing.rules.GrammarRule;
 import info.jonclark.util.FileUtils;
 import info.jonclark.util.StringUtils;
@@ -177,7 +177,7 @@ public class LexicalProbsFeature<R extends GrammarRule<T>, T extends Token> impl
 		return sumLogP;
 	}
 
-	private LexicalProbsScore calcLexicalProb(Parse<T> a, Parse<T> b) {
+	private LexicalProbsScore calcLexicalProb(PartialParse<T> a, PartialParse<T> b) {
 
 		List<T> sourceTokens =
 				new ArrayList<T>(a.getSourceTokens().size() + b.getSourceTokens().size());
@@ -195,9 +195,9 @@ public class LexicalProbsFeature<R extends GrammarRule<T>, T extends Token> impl
 		return new LexicalProbsScore(sgtLogProb, tgsLogProb);
 	}
 
-	public LexicalProbsScore combineChildParseScores(Parse<T> accumulatedParse,
+	public LexicalProbsScore combineChildParseScores(PartialParse<T> accumulatedParse,
 			TokenSequence<T> accumulatedSeq, LexicalProbsScore accumulatedScore,
-			Parse<T> addedChild, TokenSequence<T> addedSeq, LexicalProbsScore addedScore,
+			PartialParse<T> addedChild, TokenSequence<T> addedSeq, LexicalProbsScore addedScore,
 			TokenSequence<T> combinedSeq, List<T> inputSentence) {
 
 		if (accumulatedScore == DUMMY_SCORE || addedScore == DUMMY_SCORE) {
@@ -240,7 +240,7 @@ public class LexicalProbsFeature<R extends GrammarRule<T>, T extends Token> impl
 		return new LexicalProbsScore(sgt, tgs);
 	}
 
-	public LexicalProbsScore combineRuleScoreWithChildren(Parse<T> parse,
+	public LexicalProbsScore combineRuleScoreWithChildren(PartialParse<T> parse,
 			LexicalProbsScore parseScore, R ruleToAppend, List<T> inputSentence) {
 
 		// no terminals change, no change in score
@@ -267,7 +267,7 @@ public class LexicalProbsFeature<R extends GrammarRule<T>, T extends Token> impl
 		return DUMMY_SCORE;
 	}
 
-	public LexicalProbsScore scoreTerminalParse(Parse<T> terminalParse, TokenSequence<T> seq) {
+	public LexicalProbsScore scoreTerminalParse(PartialParse<T> terminalParse, TokenSequence<T> seq) {
 
 		return DUMMY_SCORE;
 	}

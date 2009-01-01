@@ -26,7 +26,7 @@ public class MonoCFGRuleTransducer<T extends Token> implements Transducer<MonoCF
 		return rule.getRhs();
 	}
 
-	private int[] getMonotonicAlignment(int length) {
+	public static int[] getMonotonicAlignment(int length) {
 		int[] alignment = monotonicAlignments.get(length);
 		if (alignment == null) {
 			alignment = new int[length];

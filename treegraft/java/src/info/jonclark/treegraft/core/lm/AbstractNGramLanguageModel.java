@@ -2,6 +2,7 @@ package info.jonclark.treegraft.core.lm;
 
 import info.jonclark.stat.ProfilerTimer;
 import info.jonclark.treegraft.core.tokens.Token;
+import info.jonclark.treegraft.core.tokens.TokenFactory;
 import info.jonclark.treegraft.core.tokens.TokenSequence;
 
 import java.util.ArrayList;
@@ -16,7 +17,11 @@ public abstract class AbstractNGramLanguageModel<T extends Token> implements Lan
 	protected final ProfilerTimer lmBoundaryTimer;
 	protected final ProfilerTimer lmScoreTokenTimer;
 
-	public AbstractNGramLanguageModel(ProfilerTimer parentTimer) {
+	public AbstractNGramLanguageModel(T bos, T eos, TokenFactory<T> tokenFactory,
+			ProfilerTimer parentTimer) {
+
+		sentenceBegin = tokenFactory.makeTokenSequence(asList(bos));
+		sentenceEnd = tokenFactory.makeTokenSequence(asList(eos));
 
 		// loader.loadLM(this, tokenFactory, stream, encoding,
 		// targetVocabulary);
@@ -24,22 +29,21 @@ public abstract class AbstractNGramLanguageModel<T extends Token> implements Lan
 		this.lmScoreTokenTimer = ProfilerTimer.newTimer("lmScoreToken", parentTimer, true, false);
 	}
 
+	private List<T> asList(T t) {
+		List<T> list = new ArrayList<T>(1);
+		list.add(t);
+		return list;
+	}
+
 	public abstract void setOrder(int order, int[] expectedItems);
-	
+
 	public void setOOVProb(double logProb) {
 		this.oovProb = logProb;
 	}
 
-	public void setSentenceBeginMarker(TokenSequence<T> bos) {
-		this.sentenceBegin = bos;
-	}
-
-	public void setSentenceEndMarker(TokenSequence<T> eos) {
-		this.sentenceEnd = eos;
-	}
-
 	// TODO: Presize LM hashes
-	public abstract void addEntry(TokenSequence<T> tokenSequence, double logProb, double backoffLogProb);
+	public abstract void addEntry(TokenSequence<T> tokenSequence, double logProb,
+			double backoffLogProb);
 
 	public LanguageModelScore scoreSequence(TokenSequence<T> tokenSequence) {
 

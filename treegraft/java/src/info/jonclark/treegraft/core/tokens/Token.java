@@ -46,4 +46,6 @@ public interface Token extends Comparable<Token> {
 	 * @return True if this is a terminal; false otherwise
 	 */
 	public boolean isTerminal();
+	
+	public String getWord();
 }

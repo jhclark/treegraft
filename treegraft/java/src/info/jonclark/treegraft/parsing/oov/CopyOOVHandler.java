@@ -1,6 +1,9 @@
 package info.jonclark.treegraft.parsing.oov;
 
-import info.jonclark.properties.SmartProperties;
+import info.jonclark.lang.Option;
+import info.jonclark.lang.Options;
+import info.jonclark.lang.OptionsTarget;
+import info.jonclark.treegraft.Treegraft.TreegraftConfig;
 import info.jonclark.treegraft.core.featureimpl.RuleScore;
 import info.jonclark.treegraft.core.tokens.Token;
 import info.jonclark.treegraft.core.tokens.TokenFactory;
@@ -11,6 +14,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 
+@OptionsTarget(CopyOOVHandler.CopyOrDeleteOOVHandlerOptions.class)
 public class CopyOOVHandler<T extends Token> implements OutOfVocabularyHandler<SyncCFGRule<T>, T> {
 
 	private final TokenFactory<T> tokenFactory;
@@ -19,17 +23,25 @@ public class CopyOOVHandler<T extends Token> implements OutOfVocabularyHandler<S
 	private final int[] alignment;
 	private int oovCounter = 0;
 
-	public CopyOOVHandler(SmartProperties props, TokenFactory<T> tokenFactory) {
+	public static class CopyOrDeleteOOVHandlerOptions implements Options {
 
-		this.tokenFactory = tokenFactory;
+		@Option(name = "grammar.oovHandler.oovRuleSgtLogProb", usage = "The source-given-target log probability for out of vocabulary words")
+		public double sgt;
+
+		@Option(name = "grammar.oovHandler.oovRuleTgsLogProb", usage = "The target-given-source log probability for out of vocabulary words")
+		public double tgs;
+
+		@Option(name = "grammar.oovHandler.oovRuleLhsList", usage = "An OOV rule will be created for every LHS symbol in this list each time an out of vocabulary word is encountered")
+		public String[] oovRuleLhsList;
+	}
+
+	public CopyOOVHandler(CopyOrDeleteOOVHandlerOptions opts, TreegraftConfig<?, T> config) {
+
+		this.tokenFactory = config.tokenFactory;
 		this.alignment = new int[] { -1 };
 
-		double sgt = props.getPropertyFloat("grammar.oovHandler.oovRuleSgtLogProb");
-		double tgs = props.getPropertyFloat("grammar.oovHandler.oovRuleTgsLogProb");
-		this.oovRuleScore = new RuleScore(sgt, tgs);
-		this.oovRuleLhsList =
-				tokenFactory.makeTokens(
-						props.getPropertyStringArray("grammar.oovHandler.oovRuleLhsList"), true);
+		this.oovRuleScore = new RuleScore(opts.sgt, opts.tgs);
+		this.oovRuleLhsList = tokenFactory.makeTokens(opts.oovRuleLhsList, true);
 	}
 
 	public List<SyncCFGRule<T>> generateOOVRules(T sourceOovTerminal,

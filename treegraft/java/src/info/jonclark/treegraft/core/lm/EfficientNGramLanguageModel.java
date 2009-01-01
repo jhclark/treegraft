@@ -5,6 +5,7 @@ import info.jonclark.lang.Options;
 import info.jonclark.lang.OptionsTarget;
 import info.jonclark.lang.hash.WideHashMap;
 import info.jonclark.stat.ProfilerTimer;
+import info.jonclark.treegraft.Treegraft.TreegraftConfig;
 import info.jonclark.treegraft.core.tokens.TokenSequence;
 import info.jonclark.treegraft.core.tokens.integer.IntegerToken;
 import info.jonclark.treegraft.core.tokens.integer.IntegerTokenSequence;
@@ -21,13 +22,13 @@ public class EfficientNGramLanguageModel extends AbstractNGramLanguageModel<Inte
 
 	public static class EfficientNGramLanguageModelOptions implements Options {
 
-		@Option(name = "lm.loadFactor", usage = "The percentage (0 < p < 1) of each LM hash table that will be filled after all n-grams have been loaded")
+		@Option(name = "lm.loadFactor", usage = "The percentage (0 < p < 1) of each LM hash table that will be filled after all n-grams have been loaded", defaultValue = "0.9")
 		public float loadFactor;
 	}
 
 	public EfficientNGramLanguageModel(EfficientNGramLanguageModelOptions opts,
-			ProfilerTimer parentTimer) {
-		super(parentTimer);
+			TreegraftConfig<?, IntegerToken> config) {
+		super(config.bos, config.eos, config.tokenFactory, config.profiler.featureTimer);
 		this.opts = opts;
 	}
 

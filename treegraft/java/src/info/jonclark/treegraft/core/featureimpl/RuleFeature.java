@@ -10,7 +10,7 @@ import info.jonclark.treegraft.core.scoring.ProbUtils;
 import info.jonclark.treegraft.core.tokens.Token;
 import info.jonclark.treegraft.core.tokens.TokenSequence;
 import info.jonclark.treegraft.decoder.DecoderHypothesis;
-import info.jonclark.treegraft.parsing.parses.Parse;
+import info.jonclark.treegraft.parsing.parses.PartialParse;
 import info.jonclark.treegraft.parsing.rules.GrammarRule;
 
 import java.util.List;
@@ -38,8 +38,8 @@ public class RuleFeature<R extends GrammarRule<T>, T extends Token> implements
 				ProfilerTimer.newTimer("ruleFeature", config.profiler.featureTimer, true, false);
 	}
 
-	public RuleScore combineChildParseScores(Parse<T> accumulatedParse,
-			TokenSequence<T> accumulatedSeq, RuleScore accumulatedScore, Parse<T> addedChild,
+	public RuleScore combineChildParseScores(PartialParse<T> accumulatedParse,
+			TokenSequence<T> accumulatedSeq, RuleScore accumulatedScore, PartialParse<T> addedChild,
 			TokenSequence<T> addedSeq, RuleScore addedScore, TokenSequence<T> combinedSeq,
 			List<T> inputSentence) {
 
@@ -69,7 +69,7 @@ public class RuleFeature<R extends GrammarRule<T>, T extends Token> implements
 		return ruleScore;
 	}
 
-	public RuleScore combineRuleScoreWithChildren(Parse<T> parse, RuleScore parseScore,
+	public RuleScore combineRuleScoreWithChildren(PartialParse<T> parse, RuleScore parseScore,
 			R ruleToAppend, List<T> inputSentence) {
 
 		ruleFeatureTimer.go();
@@ -93,7 +93,7 @@ public class RuleFeature<R extends GrammarRule<T>, T extends Token> implements
 		return new RuleScore(0.0, 0.0);
 	}
 
-	public RuleScore scoreTerminalParse(Parse<T> terminalParse, TokenSequence<T> seq) {
+	public RuleScore scoreTerminalParse(PartialParse<T> terminalParse, TokenSequence<T> seq) {
 
 		return getInitialScore();
 	}

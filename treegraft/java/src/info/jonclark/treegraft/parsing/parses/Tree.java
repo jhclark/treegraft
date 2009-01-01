@@ -66,17 +66,22 @@ public class Tree<T extends Token> {
 		toString(formatter, builder);
 		return builder.toString().trim();
 	}
+	
 
 	public void toString(TreeFormatter<T> formatter, StringBuilder builder) {
+		toString(formatter, builder, 0);
+	}
+
+	private void toString(TreeFormatter<T> formatter, StringBuilder builder, int depth) {
 
 		if (isTerminal()) {
-			builder.append(formatter.formatTerminal(label));
+			builder.append(formatter.formatTerminal(label, depth));
 		} else {
-			builder.append(formatter.formatNonterminalBefore(label, scores));
+			builder.append(formatter.formatNonterminalBefore(label, scores, depth));
 			for (Tree<T> child : children) {
-				child.toString(formatter, builder);
+				child.toString(formatter, builder, depth + 1);
 			}
-			builder.append(formatter.formatNonterminalAfter(label, scores));
+			builder.append(formatter.formatNonterminalAfter(label, scores, depth));
 		}
 	}
 }

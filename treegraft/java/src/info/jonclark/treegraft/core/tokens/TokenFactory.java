@@ -50,15 +50,6 @@ public abstract class TokenFactory<T extends Token> {
 	public abstract TokenSequence<T> makeTokenSequence(List<T> tokens);
 
 	/**
-	 * Gets the original string representation of a <code>Token</code>.
-	 * 
-	 * @param tok
-	 *            the token to be string-ified
-	 * @return the original string for a token
-	 */
-	public abstract String getTokenAsString(T tok);
-
-	/**
 	 * Creates a new <code>Token</code> array of the current type to get around
 	 * the defficiency in Java's generics of not being able to create generic
 	 * arrays.
@@ -68,28 +59,6 @@ public abstract class TokenFactory<T extends Token> {
 	 * @return an empty <code>Token</code> array
 	 */
 	public abstract T[] newTokenArray(int length);
-
-	/**
-	 * A convenience method that turns an array of tokens into an array of
-	 * Strings.
-	 * 
-	 * @param toks
-	 *            the array of tokens to be String-ified
-	 * @return an array of Strings
-	 */
-	public String[] getTokensAsStrings(T[] toks) {
-		String[] strs = new String[toks.length];
-		for (int i = 0; i < toks.length; i++)
-			strs[i] = getTokenAsString(toks[i]);
-		return strs;
-	}
-	
-	public String[] getTokensAsStrings(List<T> toks) {
-		String[] strs = new String[toks.size()];
-		for (int i = 0; i < toks.size(); i++)
-			strs[i] = getTokenAsString(toks.get(i));
-		return strs;
-	}
 
 	/**
 	 * A convenience method that turns an input sequence from a String array
@@ -102,4 +71,20 @@ public abstract class TokenFactory<T extends Token> {
 	 * @return a token array of terminals that represent the given strings
 	 */
 	public abstract T[] makeTokens(String[] strs, boolean terminals);
+
+	public String[] getTokensAsStrings(T[] tokens) {
+		String[] arr = new String[tokens.length];
+		for (int i = 0; i < tokens.length; i++) {
+			arr[i] = tokens[i].getWord();
+		}
+		return arr;
+	}
+
+	public String[] getTokensAsStrings(List<T> tokens) {
+		String[] arr = new String[tokens.size()];
+		for (int i = 0; i < tokens.size(); i++) {
+			arr[i] = tokens.get(i).getWord();
+		}
+		return arr;
+	}
 }

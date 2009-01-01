@@ -12,7 +12,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.logging.Logger;
 
@@ -22,13 +21,6 @@ public class ARPALanguageModelLoader<T extends Token> implements LanguageModelLo
 
 	public void loadLM(LanguageModel<T> lm, TokenFactory<T> tokenFactory, InputStream stream,
 			String encoding, HashSet<T> targetVocab, TaskListener task) throws IOException {
-
-		TokenSequence<T> bos =
-				tokenFactory.makeTokenSequence(Arrays.asList(tokenFactory.makeToken("<s>", true)));
-		TokenSequence<T> eos =
-				tokenFactory.makeTokenSequence(Arrays.asList(tokenFactory.makeToken("</s>", true)));
-		lm.setSentenceBeginMarker(bos);
-		lm.setSentenceEndMarker(eos);
 
 		BufferedReader in = new BufferedReader(new InputStreamReader(stream, encoding));
 

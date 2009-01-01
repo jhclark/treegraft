@@ -21,7 +21,7 @@ import info.jonclark.treegraft.parsing.monocfg.MonoCFGRuleTransducer;
 import info.jonclark.treegraft.parsing.oov.OutOfVocabularyHandler;
 import info.jonclark.treegraft.parsing.oov.PanicOOVHandler;
 import info.jonclark.treegraft.parsing.parses.BasicTreeFormatter;
-import info.jonclark.treegraft.parsing.parses.Parse;
+import info.jonclark.treegraft.parsing.parses.PartialParse;
 import info.jonclark.treegraft.parsing.parses.ParseFactory;
 import info.jonclark.treegraft.parsing.rules.GrammarRule;
 import info.jonclark.treegraft.parsing.rules.RuleException;
@@ -113,7 +113,7 @@ public class ChartParserTest {
 
 		ForestUnpacker<MonoCFGRule<T>, T> unpacker = getMonoUnpacker(tokenFactory, tokens);
 
-		Parse<T>[] parses = c.getGrammaticalParses(unpacker);
+		PartialParse<T>[] parses = c.getGrammaticalParses(unpacker);
 		String[] result = new String[parses.length];
 		for (int i = 0; i < result.length; i++) {
 			result[i] = parses[i].getTargetTree().toString(formatter);
@@ -291,8 +291,8 @@ public class ChartParserTest {
 		System.out.println("Got " + keys.size() + " keys");
 		for (Key<SyncCFGRule<T>, T> key : keys) {
 			System.out.print("Actual key: " + key.toString() + " -> ");
-			List<Parse<T>> partialParses = unpacker.getPartialParses(key);
-			for (Parse<T> parse : partialParses) {
+			List<PartialParse<T>> partialParses = unpacker.getPartialParses(key);
+			for (PartialParse<T> parse : partialParses) {
 				String str = parse.getTargetTree().toString(formatter);
 				System.out.print(str + "; ");
 			}
@@ -336,7 +336,7 @@ public class ChartParserTest {
 			boolean found = false;
 			for (Key<SyncCFGRule<T>, T> matchingSourceKey : matchingSourceKeys) {
 
-				List<Parse<T>> partialParses = unpacker.getPartialParses(matchingSourceKey);
+				List<PartialParse<T>> partialParses = unpacker.getPartialParses(matchingSourceKey);
 
 				// show actual partial parses
 				// for (Parse<SyncCFGRule<T>, T> parse : partialParses) {
@@ -347,7 +347,7 @@ public class ChartParserTest {
 				// do inefficient search over all parses
 				expectedTargetKey = expectedTargetKey.trim();
 
-				for (Parse<T> parse : partialParses) {
+				for (PartialParse<T> parse : partialParses) {
 					String actualParse = parse.getTargetTree().toString(formatter);
 					System.out.println("ACTUAL PARSE: " + actualParse);
 					if (expectedTargetKey.equals(actualParse)) {
@@ -427,7 +427,7 @@ public class ChartParserTest {
 		BasicTreeFormatter<T> formatter = new BasicTreeFormatter<T>(tokenFactory, true, false);
 		ForestUnpacker<SyncCFGRule<T>, T> unpacker = getSyncUnpacker(tokenFactory, tokens);
 
-		Parse<T>[] parses = c.getGrammaticalParses(unpacker);
+		PartialParse<T>[] parses = c.getGrammaticalParses(unpacker);
 		System.out.println(parses.length + " parses found.");
 		for (int i = 0; i < parses.length; i++) {
 			String src = parses[i].getSourceTree().toString(formatter);

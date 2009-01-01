@@ -4,7 +4,7 @@ import info.jonclark.treegraft.core.Result;
 import info.jonclark.treegraft.core.scoring.Scorer;
 import info.jonclark.treegraft.core.tokens.Token;
 import info.jonclark.treegraft.core.tokens.TokenFactory;
-import info.jonclark.treegraft.decoder.DecoderHypothesis;
+import info.jonclark.treegraft.parsing.parses.PartialParse;
 import info.jonclark.treegraft.parsing.rules.GrammarRule;
 import info.jonclark.util.StringUtils;
 
@@ -24,12 +24,12 @@ public class OptimizeNBestHypothesisFormatter<R extends GrammarRule<T>, T extend
 
 	public void formatHypothesis(Result<R, T> result, PrintWriter out) {
 	
-		for (DecoderHypothesis<T> hyp : result.nBestList) {
+		for (PartialParse<T> hyp : result.nBestList) {
 
 			// TODO: Move the responsibility of <s> and </s> removal somewhere
 			// else
 			
-			List<T> hypTokens = hyp.getTokens();
+			List<T> hypTokens = hyp.getTargetTokens();
 			// remove <s> and </s>
 			assert hypTokens.size() >= 2;
 			hypTokens = hypTokens.subList(1, hypTokens.size() - 1);
