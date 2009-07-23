@@ -1,12 +1,15 @@
 package edu.cmu.cs.lti.avenue;
 
 import info.jonclark.stat.SecondTimer;
-import info.jonclark.treegraft.core.tokens.integer.IntegerToken;
-import info.jonclark.treegraft.core.tokens.integer.IntegerTokenFactory;
-import info.jonclark.treegraft.core.tokens.integer.IntegerTokenSequence;
-import info.jonclark.treegraft.parsing.rules.RuleException;
-import info.jonclark.treegraft.parsing.synccfg.SyncCFGGrammarLoader;
-import info.jonclark.treegraft.parsing.synccfg.SyncCFGRule;
+import info.jonclark.treegraft.Treegraft;
+import info.jonclark.treegraft.Treegraft.TreegraftConfig;
+import info.jonclark.treegraft.datastructures.IntegerToken;
+import info.jonclark.treegraft.datastructures.IntegerTokenFactory;
+import info.jonclark.treegraft.datastructures.IntegerTokenSequence;
+import info.jonclark.treegraft.support.synccfg.SyncCFGGrammarLoader;
+import info.jonclark.treegraft.support.synccfg.SyncCFGRule;
+import info.jonclark.treegraft.support.synccfg.SyncCFGGrammarLoader.GrammarLoaderOptions;
+import info.jonclark.treegraft.util.RuleException;
 import info.jonclark.util.StringUtils;
 
 import java.io.BufferedReader;
@@ -40,13 +43,18 @@ public class FastLexiconFilterer {
 	private ArrayBlockingQueue<SyncCFGRule<IntegerToken>> rulesOut =
 			new ArrayBlockingQueue<SyncCFGRule<IntegerToken>>(1000000);
 	private Thread[] workers;
+	private final double sgtWeight;
+	private final double tgsWeight;
 
-	public FastLexiconFilterer(String string, String string2, String string3, int threshold)
-			throws RuleException {
+	public FastLexiconFilterer(String string, String string2, String string3, double tgsWeight,
+			double sgtWeight, int threshold) throws RuleException {
+
 		this.fSentsIn = string;
 		this.fLexiconIn = string2;
 		this.fLexiconOut = string3;
 		this.threshold = threshold;
+		this.sgtWeight = sgtWeight;
+		this.tgsWeight = tgsWeight;
 
 		POISON = new ArrayList<SyncCFGRule<IntegerToken>>(0);
 		POISON2 =
@@ -85,8 +93,12 @@ public class FastLexiconFilterer {
 				// 1000 *
 						1000 * 1000);
 
+				TreegraftConfig<SyncCFGRule<IntegerToken>, IntegerToken> config =
+						new Treegraft.TreegraftConfig<SyncCFGRule<IntegerToken>, IntegerToken>();
+				config.tokenFactory = tokenFactory;
+				GrammarLoaderOptions opts = new SyncCFGGrammarLoader.GrammarLoaderOptions(false);
 				SyncCFGGrammarLoader<IntegerToken> loader =
-						new SyncCFGGrammarLoader<IntegerToken>(tokenFactory);
+						new SyncCFGGrammarLoader<IntegerToken>(opts, config);
 
 				IntegerToken[] prevRhs = null;
 				List<SyncCFGRule<IntegerToken>> ruleGroup =
@@ -108,7 +120,7 @@ public class FastLexiconFilterer {
 							rulesIn.put(ruleGroup);
 							ruleGroup = new ArrayList<SyncCFGRule<IntegerToken>>();
 						}
-						
+
 						// prepare for next iteration
 						ruleGroup.add(rule);
 						prevRhs = curRhs;
@@ -122,7 +134,7 @@ public class FastLexiconFilterer {
 						System.err.println("Invalid rule: " + e.getMessage());
 					}
 				} while (rule != null);
-				
+
 				// put the last rule group
 				if (prevRhs != null) {
 					rulesIn.put(ruleGroup);
@@ -169,9 +181,13 @@ public class FastLexiconFilterer {
 		public void run() {
 
 			Comparator<SyncCFGRule<IntegerToken>> c = new Comparator<SyncCFGRule<IntegerToken>>() {
+
+				// NOTE: tgs and sgt are already in log domain in scores
+				// but originalString still has scores in probability domain
 				public int compare(SyncCFGRule<IntegerToken> o1, SyncCFGRule<IntegerToken> o2) {
-					if (o1.getRuleScores().sgt * o1.getRuleScores().tgs > o2.getRuleScores().sgt
-							* o2.getRuleScores().tgs) {
+
+					if (sgtWeight * o1.getRuleScores().sgt + tgsWeight * o1.getRuleScores().tgs > sgtWeight
+							* o2.getRuleScores().sgt + tgsWeight * o2.getRuleScores().tgs) {
 						return -1;
 					} else {
 						return 1;
@@ -191,12 +207,14 @@ public class FastLexiconFilterer {
 						Collections.sort(ruleGroup, c);
 						for (int i = 0; i < ruleGroup.size() && i < threshold; i++) {
 							rulesOut.put(ruleGroup.get(i));
-//							System.out.println("YES: "
-//									+ StringUtils.untokenize(tokenFactory.getTokensAsStrings(rhs)));
+							// System.out.println("YES: "
+							// +
+							// StringUtils.untokenize(tokenFactory.getTokensAsStrings(rhs)));
 						}
 					} else {
-//						System.out.println("NO: "
-//								+ StringUtils.untokenize(tokenFactory.getTokensAsStrings(rhs)));
+						// System.out.println("NO: "
+						// +
+						// StringUtils.untokenize(tokenFactory.getTokensAsStrings(rhs)));
 					}
 				}
 
@@ -208,13 +226,20 @@ public class FastLexiconFilterer {
 	}
 
 	public static void main(String[] args) throws Exception {
-		if (args.length != 4) {
-			System.err.println("Usage: program <test_sents> <lexicon_in> <lexicon_out> <n-best-rule-threshold>");
+		if (args.length != 6) {
+			System.err.println("Usage: program <test_sents> <lexicon_in> <lexicon_out> <n-best-rule-threshold> <tgs_weight> <sgt_weight>");
 			System.exit(1);
 		}
 
+		// XXX: HACK
+		SyncCFGRule.FILTERING_MODE = true;
+
+		double tgsWeight = Double.parseDouble(args[4]);
+		double sgtWeight = Double.parseDouble(args[5]);
+
 		FastLexiconFilterer filt =
-				new FastLexiconFilterer(args[0], args[1], args[2], Integer.parseInt(args[3]));
+				new FastLexiconFilterer(args[0], args[1], args[2], tgsWeight, sgtWeight,
+						Integer.parseInt(args[3]));
 		filt.loadSentences();
 		filt.start();
 	}
