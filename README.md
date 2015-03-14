@@ -1,8 +1,7 @@
-
-IMPORTANT NOTICE: PROJECT DEPRECATED
+# IMPORTANT NOTICE: PROJECT DEPRECATED
 This project has become dormant for quite some time now. If you're looking for an efficient syntactic SMT decoder, I recommend cdec. I use it for my own research and commit code to it from time to time. Feel free to use this code for education, but there's far better decoders these days.
 
-Summary
+# Summary
 A transduction parser is the basis for NLP tasks such as paraphrasing and machine translation. This parser supports transduction via weighted synchronous context free grammar rules.
 
 # treegraft
